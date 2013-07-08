@@ -1,0 +1,3 @@
+[submodule "locket"]
+	path = locket
+	url = git@github.com:bigeasy/locket.git
