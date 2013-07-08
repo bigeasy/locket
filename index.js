@@ -24,10 +24,10 @@ Locket.prototype._open = cadence(function (step, options) {
             fs.readdir(this.location, step())
         }, 'ENOENT', function (_, error) {
             if (options.createIfMissing) {
-              exists = false
-              mkdirp(this.location, step())
+                exists = false
+                mkdirp(this.location, step())
             } else {
-              throw new Error('does not exist')
+                throw new Error('does not exist')
             }
         }])(2)
     }, function (listing) {
@@ -35,22 +35,22 @@ Locket.prototype._open = cadence(function (step, options) {
         if (exists) {
           listing = listing.filter(function (file) { return file[0] != '.' }).sort()
           if (listing.length && !listing.every(function (file, index) { return subdirs[index] == file })) {
-            throw new Error('not a Locket datastore')
+              throw new Error('not a Locket datastore')
           }
         } else {
           subdirs.forEach(step([], function (dir) {
-            fs.mkdir(path.join(this.location, dir), step())
+              fs.mkdir(path.join(this.location, dir), step())
           }))
         }
     }, function () {
-      this._primary = new Strata(path.join(this.location, 'primary'), {
-        leafSize: 1024,
-        branchSize: 1024
-      })
-      if (!exists) this._primary.create(step())
+        this._primary = new Strata(path.join(this.location, 'primary'), {
+            leafSize: 1024,
+            branchSize: 1024
+        })
+        if (!exists) this._primary.create(step())
     }, function () {
-      this._primary.open(step())
-      this._isOpened = true
+        this._primary.open(step())
+        this._isOpened = true
     })
 })
 
