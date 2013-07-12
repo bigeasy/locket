@@ -218,7 +218,9 @@ Locket.prototype._open = cadence(function (step, options) {
         this._isOpened = true
         this._operations = 0
         this._successfulTransactions = {}
-        this._nextTransactionId = 1
+        this._leastTransactionId = 0
+        this._transactionIds = {}
+        this._nextTransactionId = Number.MAX_VALUE
         this._staging = this._secondary
         this._transactions.iterator(step())
     }, function (transactions) {
@@ -235,10 +237,13 @@ Locket.prototype._open = cadence(function (step, options) {
             }, function (transactionId) {
                 this._successfulTransactions[transactionId] = true
                 this._nextTransactionId = Math.max(this._nextTransactionId, transactionId + 1)
+                this._leastTransactionId = Math.min(this._leastTransactionId, transactionId - 1)
             })(length - offset)
         }, function () {
             transactions.next(step())
         })(null, true)
+    }, function () {
+        this._leastTransactionId = Math.min(this._leastTransactionId, this._nextTransactionId - 1)
     })
 })
 
