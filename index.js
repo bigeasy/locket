@@ -120,7 +120,7 @@ Iterator.prototype._next = cadence(function (step) {
                 this._getLatestGoingForward(candidate.name, step())
             }));
         }, function () {
-            return winner.record.value
+            step()(null, winner.record.key, winner.record.value)
         })
     })
 })
@@ -285,8 +285,13 @@ Locket.prototype._get = cadence(function (step, key, options) {
     var iterator = new Iterator(this, { start: key, limit: 1 })
     step(function () {
         iterator.next(step())
-    }, function (value) {
-        step(function () { iterator.end(step()) }, function () { return value })
+    }, function ($key, value) {
+        step(function () {
+            iterator.end(step())
+        }, function () {
+            if ($key == key) return step()(null, value)
+            else step()(new Error)
+        })
     })
 })
 
