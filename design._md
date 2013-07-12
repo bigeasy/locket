@@ -27,3 +27,85 @@ This is the logo and logo-type. No thoughts yet on how to present the software
 itself, except that it doesn't need much in the way of documentation. It is an
 implementation of documented API. It needs a sales letter that tells you why
 Locket is an advanced implementation the API.
+
+## Logo-type Progression
+
+As noted above I wanted a serif font because I wanted the letters in the logo to
+themselves be adorned, the way we adorn ourselves with lockets.
+
+Here is the recipe I followed as fast as I could, so I would swoop through the
+design and not fuss.
+
+ * Draw half a heart.
+ * Duplicate the half and create a whole heart.
+ * Fill the heart.
+ * Duplicate the heart to create a locket cover.
+ * Position the cover.
+ * Punch a hole in the heart to create  a locket frame.
+ * Put a loop on top of the frame.
+ * Choose a thick serif font.
+ * Replace the o in locket with the locket.
+
+I got this after trying a few different fonts. This is the **final** that I'll
+live with for a few weeks.
+
+![Locket](Locket-Andada.png "Locket")
+
+I got the locket rather directly. I'd already spend a long time fussing over the
+half heart, so that much was done. So long as it made a descent full heart, I
+was going to go with it.
+
+I made sure it had a rounded point so it could hinge in a V. I didn't want the
+locket cover to drop straight down. I did not want the locket cover to be the O
+and the locket frame the C, that would be too clever, and in fact, as I write
+this it is as fully formed as that thought has been. I've repressed it.
+
+Here is a [Google Fonts collection of the fonts mentioned in this
+article](http://www.google.com/fonts#ReviewPlace:refine/Collection:Arbutus+Slab|Domine|Andada|Sacramento)
+that you can use to follow along. Helvetica is not listed there, but it is
+probably installed on your computer.
+
+When I first put the locket to type, I used the default font for Sketch, which
+was Helvetica. I liked the result.
+
+![Locket Helvetica](Locket-Helvetica.png "Locket Helvetica")
+
+I needed a font that was not too thick to company the locket frame. The locket
+frame is a uniform width all around, so I would want a font with a uniform
+width, as opposed to one of those fonts with an O that is thin on top and wide
+in the middle.
+
+I tried Arbutus Slab, because it looked like it had an exuberant K.
+
+![Locket Arbrutus Slab](Locket-Arbrutus-Slab.png "Locket Arbrutus Slab")
+
+I'd imagined that I'd want a font that had a ball at the top of it's C. But a
+font as dynamic as Arbrutus Slab made the locket look flat, bland, and
+incomplete.
+
+I tried Domine. It is milder.
+
+![Locket Domine](Locket-Domine.png "Locket Domine")
+
+It is closer. The locket does not look as static in comparison to the font.
+
+I settled on Anadada. It didn't have that ball at the top of the C. That ball
+means fancy jewelry. Andada appears to be not as fancy, therefore not as
+pretentious. It is closer to adolescence than it to retirement.
+
+![Locket Anadada No Script](Locket-Andada-No-Script.png "Locket Anadada No Script")
+
+Then I added the Locket tag line in Sacremento, which brings us to the final
+we already saw above.
+
+![Locket](Locket-Andada.png "Locket")
+
+## Software Used
+
+I had a go at using Illustrator for this project, but once I got a good half
+heart in Illustrator, I went back to Sketch and found that it had pretty good
+pen tool. I didn't like the Sketch pen tool at first, because everything it made
+was ugly, but it turns out that was just me. After spending some time in
+Illustrator, the Sketch pen tool got a lot better, and now seems to be easier to
+use than the Illustrator pen tool. Again, probably just me, but if I can get the
+results I want out of a Sketch, I'm going to stick with it.
