@@ -21,7 +21,7 @@ util.inherits(Iterator, AbstractIterator)
 Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) {
     var cursor = this._cursors[collection].cursor
     var index = this._cursors[collection].index
-    step(function () {
+    if (cursor) step(function () {
         if (index < cursor.length) return true
         else step(function () {
             cursor.next(step())
@@ -34,22 +34,28 @@ Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) 
             cursor.get(index, step())
         }, function (record) {
             step(function () {
-                if (index < cursor.length) return true
+                if (++index < cursor.length) return true
                 else step(function () {
                     cursor.next(step())
                 }, function (more) {
-                    index = cursor.index
+                    if (more)  {
+                        index = cursor.index
+                    } else {
+                        delete this._cursors[collection].cursor
+                        cursor.unlock()
+                    }
                     return more
                 })
             }, function (more) {
                 if (more) cursor.get(index, step())
                 else step(null, record)
             }, function (next) {
-                index++
                 if (next.key == record.key) record = next
                 else step(null, record)
             })()
         })} else {
+            delete this._cursors[collection].cursor
+            cursor.unlock()
             return null
         }
     }, function (record) {
@@ -212,7 +218,7 @@ Locket.prototype._open = cadence(function (step, options) {
         this._isOpened = true
         this._operations = 0
         this._successfulTransactions = {}
-        this._nextTransactionId = 0
+        this._nextTransactionId = 1
         this._staging = this._secondary
         this._transactions.iterator(step())
     }, function (transactions) {
@@ -280,7 +286,6 @@ Locket.prototype._get = cadence(function (step, key, options) {
     step(function () {
         iterator.next(step())
     }, function (value) {
-        console.log(key)
         step(function () { iterator.end(step()) }, function () { return value })
     })
 })
