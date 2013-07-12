@@ -24,7 +24,7 @@ body.reset {
   /*  box-shadow: inset 0 0 5px #202020;*/
 
 }
-body.reset * {
+body.reset z {
   margin: 0;
   padding: 0;
   position: relative;
@@ -204,4 +204,8 @@ body.reset code {
   font-family: "Anonymous Pro";
   font-size: 14pt;
   border: 1px solid #ccc;
+}
+body.reset li {
+  padding-left: 15px;
+  list-style-type: disc;
 }
