@@ -1,5 +1,9 @@
 # Locket Design Diary
 
+This is the design diary for the GitHub Pages for
+[Locket](https://github.com/bigeasy/locket), a pure-JavaScript implementation of
+an evented I/O backed LevelDB for LevelUP.
+
 Choosing to create a logo-type, my first, with a locket for an O, that can act
 alone as logo. The alone logo might take a different form factor, or it might
 even look less like a locket, in order to fit into a square for icons.
