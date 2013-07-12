@@ -199,7 +199,6 @@ Locket.prototype._open = cadence(function (step, options) {
         if (!exists) this._tertiary.create(step())
         this._transactions = new Strata({
             directory: path.join(this.location, 'transactions'),
-            extractor: extractKey,
             leafSize: 1024,
             branchSize: 1024
         })
