@@ -268,18 +268,10 @@ Locket.prototype._get = cadence(function (step, key, options) {
 })
 
 Locket.prototype._put = function (key, value, options, callback) {
-    if (!callback) {
-        callback = options
-        options = {}
-    }
     this._batch([{ type: 'put', key: key, value: value }], options, callback)
 }
 
 Locket.prototype._del = function (key, options, callback) {
-    if (!callback) {
-        callback = options
-        options = {}
-    }
     this._batch([{ type: 'del', key: key }], options, callback)
 }
 
