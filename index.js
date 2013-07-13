@@ -253,55 +253,6 @@ Locket.prototype._open = cadence(function (step, options) {
     })
 })
 
-var operations = {
-    put: cadence(function (step, transaction, options, operation) {
-        var staging = this._staging
-        var record = {
-            type: operation.type,
-            transactionId: transaction.id,
-            key: operation.key,
-            value: operation.value
-        }
-        step(function () {
-            if (transaction.cursor) {
-                return transaction.cursor
-            } else {
-                staging.mutator(record, step())
-            }
-        }, function (cursor) {
-            step(function () {
-                if (transaction.cursor) {
-                    cursor.indexOf(record, step())
-                } else {
-                    transaction.cursor = cursor
-                    return cursor.index
-                }
-            }, function (index) {
-                if (index < 0) return index
-                else step(function () {
-                    cursor.remove(index, step())
-                }, function () {
-                    return ~ index
-                })
-            }, function (index) {
-                step(function () {
-                    cursor.insert(record, record, ~ index, step())
-                }, function (insert) {
-                    if (insert != 0) {
-                        delete transaction.cursor
-                        cursor.unlock()
-                        operations.put(call, this, transaction, options, operation)
-                    } else {
-                        this._operations++
-                    }
-                })
-            })
-        })
-    }),
-}
-// Oh, look, they're the same thing.
-operations.del = operations.put
-
 Locket.prototype._get = cadence(function (step, key, options) {
     var iterator = new Iterator(this, { start: key, limit: 1 })
     step(function () {
@@ -334,9 +285,50 @@ Locket.prototype._del = function (key, options, callback) {
 
 Locket.prototype._batch = cadence(function (step, array, options) {
     var transaction = { id: this._nextTransactionId++ }
+    var staging = this._staging
     step(function () {
         step(function (operation) {
-            operations[operation.type].call(this, transaction, options, operation, step())
+            var record = {
+                type: operation.type,
+                transactionId: transaction.id,
+                key: operation.key,
+                value: operation.value
+            }
+            step(function () {
+                if (transaction.cursor) {
+                    return transaction.cursor
+                } else {
+                    staging.mutator(record, step())
+                }
+            }, function (cursor) {
+                step(function () {
+                    if (transaction.cursor) {
+                        cursor.indexOf(record, step())
+                    } else {
+                        transaction.cursor = cursor
+                        return cursor.index
+                    }
+                }, function (index) {
+                    if (index < 0) return index
+                    else step(function () {
+                        cursor.remove(index, step())
+                    }, function () {
+                        return ~ index
+                    })
+                }, function (index) {
+                    step(function () {
+                        cursor.insert(record, record, ~ index, step())
+                    }, function (insert) {
+                        if (insert != 0) {
+                            delete transaction.cursor
+                            cursor.unlock()
+                            operations.put(call, this, transaction, options, operation)
+                        } else {
+                            this._operations++
+                        }
+                    })
+                })
+            })
         })(array)
     }, function () {
         if (transaction.cursor) transaction.cursor.unlock()
