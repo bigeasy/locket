@@ -21,6 +21,7 @@ util.inherits(Iterator, AbstractIterator)
 Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) {
     var cursor = this._cursors[collection].cursor
     var index = this._cursors[collection].index
+    delete this._cursors[collection].record
     if (cursor) step(function () {
         if (index < cursor.length) return true
         else step(function () {
@@ -114,15 +115,15 @@ Iterator.prototype._next = cadence(function (step) {
             var winner = candidates.reduce(function (previous, current) {
                 return previous.record.transactionId > current.record.transactionId
                      ? previous : current
-            })
+            }).record
 
-            if (winner.record.type == 'del') this._next(step())
-            else step(function () {
+            step(function () {
                 candidates.forEach(step([], function (candidate) {
                     this._getLatestGoingForward(candidate.name, step())
                 }));
             }, function () {
-                step()(null, winner.record.key, winner.record.value)
+                if (winner.type == 'del') this._next(step())
+                else step()(null, winner.key, winner.value)
             })
         } else {
             step()(new Error('not found'))
@@ -223,9 +224,9 @@ Locket.prototype._open = cadence(function (step, options) {
         this._isOpened = true
         this._operations = 0
         this._successfulTransactions = {}
-        this._leastTransactionId = 0
+        this._leastTransactionId = Number.MAX_VALUE
         this._transactionIds = {}
-        this._nextTransactionId = Number.MAX_VALUE
+        this._nextTransactionId = 1
         this._staging = this._secondary
         this._transactions.iterator(step())
     }, function (transactions) {
@@ -256,6 +257,7 @@ var operations = {
     put: cadence(function (step, transaction, options, operation) {
         var staging = this._staging
         var record = {
+            type: operation.type,
             transactionId: transaction.id,
             key: operation.key,
             value: operation.value
@@ -275,7 +277,14 @@ var operations = {
                     return cursor.index
                 }
             }, function (index) {
-                if (index < 0) step(function () {
+                if (index < 0) return index
+                else step(function () {
+                    cursor.remove(index, step())
+                }, function () {
+                    return ~ index
+                })
+            }, function (index) {
+                step(function () {
                     cursor.insert(record, record, ~ index, step())
                 }, function (insert) {
                     if (insert != 0) {
@@ -285,11 +294,13 @@ var operations = {
                     } else {
                         this._operations++
                     }
-                }) // otherwise it's a duplicate 'put', return early
+                })
             })
         })
-    })
+    }),
 }
+// Oh, look, they're the same thing.
+operations.del = operations.put
 
 Locket.prototype._get = cadence(function (step, key, options) {
     var iterator = new Iterator(this, { start: key, limit: 1 })
@@ -313,7 +324,7 @@ Locket.prototype._put = function (key, value, options, callback) {
     this._batch([{ type: 'put', key: key, value: value }], options, callback)
 }
 
-Locket.prototype._del = function (step, key, options, callback) {
+Locket.prototype._del = function (key, options, callback) {
     if (!callback) {
         callback = options
         options = {}
