@@ -98,30 +98,35 @@ Iterator.prototype._next = cadence(function (step) {
             return ('record' in this._cursors[collection])
         }.bind(this))
 
-        var candidates = active.map(function (collection) {
-            return this._cursors[collection]
-        }.bind(this))
+        if (active.length) {
+            var candidates = active.map(function (collection) {
+                return this._cursors[collection]
+            }.bind(this))
 
-        var key = candidates.reduce(function (previous, current) {
-            return previous.record.key < current.record.key ? previous : current
-        }).record.key
+            var key = candidates.reduce(function (previous, current) {
+                return previous.record.key < current.record.key ? previous : current
+            }).record.key
 
-        candidates = candidates.filter(function (candidate) {
-            return key == candidate.record.key
-        })
+            candidates = candidates.filter(function (candidate) {
+                return key == candidate.record.key
+            })
 
-        var winner = candidates.reduce(function (previous, current) {
-            return previous.record.transactionId > current.record.transactionId ? previous : current
-        })
+            var winner = candidates.reduce(function (previous, current) {
+                return previous.record.transactionId > current.record.transactionId
+                     ? previous : current
+            })
 
-        if (winner.record.type == 'del') this._next(step())
-        else step(function () {
-            candidates.forEach(step([], function (candidate) {
-                this._getLatestGoingForward(candidate.name, step())
-            }));
-        }, function () {
-            step()(null, winner.record.key, winner.record.value)
-        })
+            if (winner.record.type == 'del') this._next(step())
+            else step(function () {
+                candidates.forEach(step([], function (candidate) {
+                    this._getLatestGoingForward(candidate.name, step())
+                }));
+            }, function () {
+                step()(null, winner.record.key, winner.record.value)
+            })
+        } else {
+            step()(new Error('not found'))
+        }
     })
 })
 
@@ -295,7 +300,7 @@ Locket.prototype._get = cadence(function (step, key, options) {
             iterator.end(step())
         }, function () {
             if ($key == key) return step()(null, value)
-            else step()(new Error)
+            else step()(new Error('not found'))
         })
     })
 })
