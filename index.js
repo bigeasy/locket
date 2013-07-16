@@ -1,9 +1,11 @@
 module.exports = Locket
 
+var Sequester         = require('sequester')
 var Strata            = require('b-tree')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
+var ok   = require('assert')
 var util = require('util')
 var fs   = require('fs')
 var path = require('path')
@@ -135,6 +137,7 @@ Iterator.prototype._next = cadence(function (step) {
 function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
     AbstractLevelDOWN.call(this, location)
+    this._sequester = new Sequester
 }
 
 util.inherits(Locket, AbstractLevelDOWN)
@@ -227,7 +230,13 @@ Locket.prototype._open = cadence(function (step, options) {
         this._leastTransactionId = Number.MAX_VALUE
         this._transactionIds = {}
         this._nextTransactionId = 1
-        this._staging = this._secondary
+        // actually, we can open really fast, if...
+        // ...if we allow that iterator up there to merge any number of trees
+        // ...if we just create an empty log and go, but consult all trees in the iterator.
+        // ...then when we merge, we simply pop a tree off the end.
+        // we open really fast by simply creating a new empty tree at the head,
+        // then merging everything at our liesure.
+        this._staging = this._secondary // TODO: Gotta merge now.
         this._transactions.iterator(step())
     }, function (transactions) {
         step(function (more) {
@@ -275,10 +284,112 @@ Locket.prototype._del = function (key, options, callback) {
     this._batch([{ type: 'del', key: key }], options, callback)
 }
 
+function Merge (db) {
+    this._db = db
+}
+
+Merge.prototype.update = cadence(function (step) {
+    var insert = step(function () {
+        if (!this._primary) {this._db._primary.mutator(candidate.key, step(step, function ($) {
+            this._primary = $
+            return this._primary.index
+        }))} else {
+            this._primary.indexOf(candidate.key, step())
+        }
+    }, function (index) {
+        if (index < 0) return ~ index
+        else step(function () {
+            this._primary.remove(index, step())
+        }, function () {
+            return index
+        })
+    }, function (index) {
+        if (candidate.type == 'put') step(function () {
+            this._primary.insert(candiate.key, { key: candidate.key, value: candidate.value }, index, step())
+        }, function (result) {
+            if (result != 0) {
+                ok(result > 0, 'went backwards')
+                this._primary.unlock()
+                delete this._primary
+                step(insert)
+            }
+        })
+    })(1)
+})
+
+Merge.prototype.merge = cadence(function (step) {
+    var unmerged
+    step([function () {
+        if (this._primary) this._primary.unlock()
+    }], function () {
+        this._db._sequester.exclude(step())
+    }, function () {
+        this._db._sequester.share(step(step, [function () { this._db._sequester.unlock() }]))
+        unmerged = this._db._staging
+        this._db._staging = unmerged == 'secondary' ? 'tertiary' : 'secondary'
+        this._db._sequester.unlock()
+    }, function () {
+        var tree = this['_' + unmerged]
+        tree.iterator(step())
+    }, function (stage) {
+        var candidate = { transactionId: 0 }
+        // use a mutator on the stage, the nice thing is that so long as we hold
+        // the mutator on the stage, the Locket iterator will block until we've
+        // moved the key, we're moving through the leaf pages, deleting
+        // everything, or, hey, uh, why don't we have a quadiary tree?
+        //
+        // okay, also, let's just queue of this shifting, have a counter, when
+        // the user calls merge, just flip a counter? yes.
+        //
+        // mrph, we could move the merged stage into an archive folder, with a
+        // date stamped name, and then rm -rf the directory, or, optionally, not
+        // rm -rf the directory, preserving all logs for every body, forever.
+        step(function (more) {
+            if (!more) {
+                step(null)
+            } else {
+                step(function (index) {
+                    index += stage.offset
+                    step(function () {
+                        stage.get(index, step())
+                    }, function (record) {
+                        if (this._db._transactions[record.transactionId]) {
+                            if (candidate.key != record.key) {
+                                this._greatestTransactionId = Math.max(candidate.transactionId, this._greatestTransactionId)
+                                delete this._db._transactions[candidate.transactionId]
+                                this._update(candidate, step())
+                            }
+                            record = candidate
+                        }
+                    })
+                })(stage.length - stage.offset)
+            }
+        }, function () {
+            stage.next(step())
+        })(null, true)
+    }, function () {
+        if (this._primary) this._primary.unlock()
+        delete this._primary
+    }, function () {
+        this._db._sequester.exclude(step())
+    }, function () {
+        var stages = this._db.stages
+    })
+})
+
+Locket.prototype._merge = cadence(function (step) {
+    this._mergeRequests++
+    if (this._mergeRequests == 0) {
+        new Merge(this).merge(step())
+    }
+})
+
 Locket.prototype._batch = cadence(function (step, array, options) {
     var transaction = { id: this._nextTransactionId++ }
     var staging = this._staging
     step(function () {
+        this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
+    }, function () {
         step(function (operation) {
             var record = {
                 type: operation.type,

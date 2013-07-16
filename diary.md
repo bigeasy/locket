@@ -44,6 +44,11 @@ system, we can take our time with with a staging tree merging it into the
 primary tree. Then swap back. The user should not be calling merge faster than
 the merge operation can merge a stage.
 
+Also, we're going to have to merge when we open a Locket, because we don't have
+a way to know which stage was active, which was merging. We can make this less
+painful by taking a sip of each stage so we can launch with an empty stage if
+one exists, merging the full one.
+
 ## Changes for Next Release
 
  * Initial commit of empty project. #2.
