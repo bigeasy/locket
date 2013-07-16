@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(4, function (step, equal, deepEqual) {
+require('proof')(6, function (step, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
     var tmp = path.join(__dirname, '../tmp')
@@ -40,7 +40,10 @@ require('proof')(4, function (step, equal, deepEqual) {
         }, function () {
             fs.readdir(empty, step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ 'primary', 'secondary', 'tertiary', 'transactions' ], 'created')
+            deepEqual(listing.sort(), [ 'primary', 'stages', 'transactions' ], 'created')
+            fs.readdir(path.join(empty, 'stages'), step())
+        }, function (listing) {
+            deepEqual(listing.sort(), [ 'able' ], 'stages created')
         }, function () {
             locket.close(step())
         })
@@ -53,7 +56,10 @@ require('proof')(4, function (step, equal, deepEqual) {
         }, function () {
             fs.readdir(empty, step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ 'primary', 'secondary', 'tertiary', 'transactions' ], 'reopened')
+            deepEqual(listing.sort(), [ 'primary', 'stages', 'transactions' ], 'reopened')
+            fs.readdir(path.join(empty, 'stages'), step())
+        }, function (listing) {
+            deepEqual(listing.sort(), [ 'able', 'baker' ], 'stages reopened')
         }, function () {
             locket.close(step())
         }, function () {

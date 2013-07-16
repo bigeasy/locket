@@ -1,5 +1,11 @@
 module.exports = Locket
 
+var alphabet = '\
+    able baker charlie dog easy fox george how item \
+    jig king love mike nan oboe peter queen roger \
+    sugar tare uncle victor william x-ray yoke zebra \
+'.trim().split(/\s+/)
+
 var Sequester         = require('sequester')
 var Strata            = require('b-tree')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
@@ -20,10 +26,10 @@ function Iterator (db, options) {
 }
 util.inherits(Iterator, AbstractIterator)
 
-Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) {
-    var cursor = this._cursors[collection].cursor
-    var index = this._cursors[collection].index
-    delete this._cursors[collection].record
+Iterator.prototype._forward = cadence(function (step, name) {
+    var cursor = this._cursors[name].cursor
+    var index = this._cursors[name].index
+    delete this._cursors[name].record
     if (cursor) step(function () {
         if (index < cursor.length) return true
         else step(function () {
@@ -44,7 +50,7 @@ Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) 
                     if (more)  {
                         index = cursor.index
                     } else {
-                        delete this._cursors[collection].cursor
+                        delete this._cursors[name].cursor
                         cursor.unlock()
                     }
                     return more
@@ -57,17 +63,17 @@ Iterator.prototype._getLatestGoingForward = cadence(function (step, collection) 
                 else step(null, record)
             })()
         })} else {
-            delete this._cursors[collection].cursor
+            delete this._cursors[name].cursor
             cursor.unlock()
             return null
         }
     }, function (record) {
-        this._cursors[collection].index = index
+        this._cursors[name].index = index
         if (record) {
             record.transactionId = record.transactionId || 0
-            this._cursors[collection].record = record
+            this._cursors[name].record = record
         } else {
-            delete this._cursors[collection].record
+            delete this._cursors[name].record
         }
         return record
     })
@@ -78,32 +84,28 @@ Iterator.prototype._next = cadence(function (step) {
     step(function () {
         if (!this._cursors) step(function () {
             this._cursors = {}
-            step(function (collection) {
-                var tree = db['_' + collection]
+            step(function (stage) {
                 step(function () {
-                    tree.iterator({ key: this._start, transactionId: 0 }, step())
+                    stage.tree.iterator({ key: this._start, transactionId: 0 }, step())
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
-                    this._cursors[collection] = {
-                        name: collection,
+                    this._cursors[stage.name] = {
+                        name: stage.name,
                         cursor: cursor,
                         index: index
                     }
+                    this._forward(stage.name, step())
                 })
-            })([ 'primary', 'secondary', 'tertiary' ])
-        }, function () {
-            ; [ 'primary', 'secondary', 'tertiary' ].forEach(step([], function (collection) {
-                this._getLatestGoingForward(collection, step())
-            }))
+            })([ { name: 'primary', tree: this._db._primary } ].concat(this._db._stages))
         })
     }, function () {
-        var active = [ 'primary', 'secondary', 'tertiary' ].filter(function (collection) {
-            return ('record' in this._cursors[collection])
+        var active = Object.keys(this._cursors).filter(function (name) {
+            return ('record' in this._cursors[name])
         }.bind(this))
 
         if (active.length) {
-            var candidates = active.map(function (collection) {
-                return this._cursors[collection]
+            var candidates = active.map(function (name) {
+                return this._cursors[name]
             }.bind(this))
 
             var key = candidates.reduce(function (previous, current) {
@@ -121,7 +123,7 @@ Iterator.prototype._next = cadence(function (step) {
 
             step(function () {
                 candidates.forEach(step([], function (candidate) {
-                    this._getLatestGoingForward(candidate.name, step())
+                    this._forward(candidate.name, step())
                 }));
             }, function () {
                 if (winner.type == 'del') this._next(step())
@@ -162,6 +164,30 @@ function compareKeyAndTransaction (left, right) {
     return left.transactionId - right.transactionId
 }
 
+function createStageStrata (letter) {
+    return new Strata({
+        directory: path.join(this.location, 'stages', letter),
+        extractor: extractKeyAndTransaction,
+        comparator: compareKeyAndTransaction,
+        leafSize: 1024,
+        branchSize: 1024
+    })
+}
+
+    //var letter = alphabet[(alphabet.indexOf(this._stages[0].name) + 1) % alphabet.length]
+var createStage = cadence(function (step, letter) {
+    var strata = createStageStrata.call(this, letter)
+    this._stages.unshift({ name: letter, tree: strata })
+
+    step (function () {
+        mkdirp(path.join(this.location, 'stages', letter), step())
+    }, function () {
+        strata.create(step())
+    }, function () {
+        strata.open(step())
+    })
+})
+
 Locket.prototype._open = cadence(function (step, options) {
     var exists = true
     step(function () {
@@ -176,7 +202,7 @@ Locket.prototype._open = cadence(function (step, options) {
             }
         }])(1)
     }, function (listing) {
-        var subdirs = [ 'primary', 'secondary', 'tertiary', 'transactions' ]
+        var subdirs = [ 'primary', 'stages', 'transactions' ]
         if (exists) {
           listing = listing.filter(function (file) { return file[0] != '.' }).sort()
           if (listing.length && !listing.every(function (file, index) { return subdirs[index] == file })) {
@@ -196,22 +222,6 @@ Locket.prototype._open = cadence(function (step, options) {
             branchSize: 1024
         })
         if (!exists) this._primary.create(step())
-        this._secondary = new Strata({
-            directory: path.join(this.location, 'secondary'),
-            extractor: extractKeyAndTransaction,
-            comparator: compareKeyAndTransaction,
-            leafSize: 1024,
-            branchSize: 1024
-        })
-        if (!exists) this._secondary.create(step())
-        this._tertiary = new Strata({
-            directory: path.join(this.location, 'tertiary'),
-            extractor: extractKeyAndTransaction,
-            comparator: compareKeyAndTransaction,
-            leafSize: 1024,
-            branchSize: 1024
-        })
-        if (!exists) this._tertiary.create(step())
         this._transactions = new Strata({
             directory: path.join(this.location, 'transactions'),
             leafSize: 1024,
@@ -220,23 +230,29 @@ Locket.prototype._open = cadence(function (step, options) {
         if (!exists) this._transactions.create(step())
     }, function () {
         this._primary.open(step())
-        this._secondary.open(step())
-        this._tertiary.open(step())
         this._transactions.open(step())
+    }, function () {
+        fs.readdir(path.join(this.location, 'stages'), step())
+    }, function (letters) {
+        step(function () {
+            letters.forEach(step([], function (letter) {
+                var strata = createStageStrata.call(this, letter)
+                step(function () {
+                    strata.open(step())
+                }, function () {
+                    return { name: letter, tree: strata }
+                })
+            }))
+        }, function (stages) {
+            this._stages = stages
+            var letter = alphabet.filter(function (letter) { return !~letters.indexOf(letter) }).shift()
+            createStage.call(this, letter, step())
+        })
     }, function () {
         this._isOpened = true
         this._operations = 0
         this._successfulTransactions = {}
-        this._leastTransactionId = Number.MAX_VALUE
-        this._transactionIds = {}
         this._nextTransactionId = 1
-        // actually, we can open really fast, if...
-        // ...if we allow that iterator up there to merge any number of trees
-        // ...if we just create an empty log and go, but consult all trees in the iterator.
-        // ...then when we merge, we simply pop a tree off the end.
-        // we open really fast by simply creating a new empty tree at the head,
-        // then merging everything at our liesure.
-        this._staging = this._secondary // TODO: Gotta merge now.
         this._transactions.iterator(step())
     }, function (transactions) {
         step(function (more) {
@@ -252,13 +268,10 @@ Locket.prototype._open = cadence(function (step, options) {
             }, function (transactionId) {
                 this._successfulTransactions[transactionId] = true
                 this._nextTransactionId = Math.max(this._nextTransactionId, transactionId + 1)
-                this._leastTransactionId = Math.min(this._leastTransactionId, transactionId - 1)
             })(length - offset)
         }, function () {
             transactions.next(step())
         })(null, true)
-    }, function () {
-        this._leastTransactionId = Math.min(this._leastTransactionId, this._nextTransactionId - 1)
     })
 })
 
@@ -386,7 +399,7 @@ Locket.prototype._merge = cadence(function (step) {
 
 Locket.prototype._batch = cadence(function (step, array, options) {
     var transaction = { id: this._nextTransactionId++ }
-    var staging = this._staging
+    var tree = this._stages[0].tree
     step(function () {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
     }, function () {
@@ -401,7 +414,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
                 if (transaction.cursor) {
                     return transaction.cursor
                 } else {
-                    staging.mutator(record, step())
+                    tree.mutator(record, step())
                 }
             }, function (cursor) {
                 step(function () {
