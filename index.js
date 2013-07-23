@@ -11,6 +11,7 @@ var Strata            = require('b-tree')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
+var tz   = require('timezone')
 var ok   = require('assert')
 var util = require('util')
 var fs   = require('fs')
@@ -42,6 +43,7 @@ Iterator.prototype._forward = cadence(function (step, name) {
         if (more) {step(function () {
             cursor.get(index, step())
         }, function (record) {
+        // todo: check that id is in succuessful transaction.
             step(function () {
                 if (++index < cursor.length) return true
                 else step(function () {
@@ -86,7 +88,10 @@ Iterator.prototype._next = cadence(function (step) {
             this._cursors = {}
             step(function (stage) {
                 step(function () {
-                    stage.tree.iterator({ key: this._start, transactionId: 0 }, step())
+                    console.log({ key: this._start, transactionId: 0 })
+                    stage.tree.iterator(stage.name == 'primary'
+                                       ? this._start
+                                       : { key: this._start, transactionId: 0 }, step())
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
                     this._cursors[stage.name] = {
@@ -141,16 +146,15 @@ function Locket (location) {
     AbstractLevelDOWN.call(this, location)
     this._sequester = new Sequester
 }
-
 util.inherits(Locket, AbstractLevelDOWN)
 
 function extractKey (record) {
-    return { key: record.key }
+    return record.key
 }
 
-function compareKey (leaf, right) {
-    if (left.key < right.key) return -1
-    else if (left.key > right.key) return 1
+function compareKey (left, right) {
+    if (left < right) return -1
+    if (left > right) return 1
     return 0
 }
 
@@ -160,7 +164,7 @@ function extractKeyAndTransaction (record) {
 
 function compareKeyAndTransaction (left, right) {
     if (left.key < right.key) return -1
-    else if (left.key > right.key) return 1
+    if (left.key > right.key) return 1
     return left.transactionId - right.transactionId
 }
 
@@ -174,10 +178,9 @@ function createStageStrata (letter) {
     })
 }
 
-    //var letter = alphabet[(alphabet.indexOf(this._stages[0].name) + 1) % alphabet.length]
 var createStage = cadence(function (step, letter) {
     var strata = createStageStrata.call(this, letter)
-    this._stages.unshift({ name: letter, tree: strata })
+    var stage = { name: letter, tree: strata }
 
     step (function () {
         mkdirp(path.join(this.location, 'stages', letter), step())
@@ -185,6 +188,8 @@ var createStage = cadence(function (step, letter) {
         strata.create(step())
     }, function () {
         strata.open(step())
+    }, function () {
+        return stage
     })
 })
 
@@ -202,7 +207,7 @@ Locket.prototype._open = cadence(function (step, options) {
             }
         }])(1)
     }, function (listing) {
-        var subdirs = [ 'primary', 'stages', 'transactions' ]
+        var subdirs = [ 'archive', 'primary', 'stages', 'transactions' ]
         if (exists) {
           listing = listing.filter(function (file) { return file[0] != '.' }).sort()
           if (listing.length && !listing.every(function (file, index) { return subdirs[index] == file })) {
@@ -247,10 +252,13 @@ Locket.prototype._open = cadence(function (step, options) {
             this._stages = stages
             var letter = alphabet.filter(function (letter) { return !~letters.indexOf(letter) }).shift()
             createStage.call(this, letter, step())
+        }, function (stage) {
+            this._stages.unshift(stage)
         })
     }, function () {
         this._isOpened = true
         this._operations = 0
+        this._mergeRequests = 0
         this._successfulTransactions = {}
         this._nextTransactionId = 1
         this._transactions.iterator(step())
@@ -280,6 +288,7 @@ Locket.prototype._get = cadence(function (step, key, options) {
     step(function () {
         iterator.next(step())
     }, function ($key, value) {
+        console.log($key, value)
         step(function () {
             iterator.end(step())
         }, function () {
@@ -299,26 +308,30 @@ Locket.prototype._del = function (key, options, callback) {
 
 function Merge (db) {
     this._db = db
+    this._greatest = 0
 }
 
-Merge.prototype.update = cadence(function (step) {
+Merge.prototype.update = cadence(function (step, record) {
+    this._greatest = Math.max(record.transactionId, this._greatest)
     var insert = step(function () {
-        if (!this._primary) {this._db._primary.mutator(candidate.key, step(step, function ($) {
+        if (!this._primary) {this._db._primary.mutator(record.key, step(step, function ($) {
             this._primary = $
             return this._primary.index
         }))} else {
-            this._primary.indexOf(candidate.key, step())
+            this._primary.indexOf(record.key, step())
         }
     }, function (index) {
         if (index < 0) return ~ index
         else step(function () {
+            throw new Error // we don't wanna go ehre.
             this._primary.remove(index, step())
         }, function () {
             return index
         })
     }, function (index) {
-        if (candidate.type == 'put') step(function () {
-            this._primary.insert(candiate.key, { key: candidate.key, value: candidate.value }, index, step())
+        if (record.type == 'put') step(function () {
+            // todo: probably re-extract?
+            this._primary.insert({ key: record.key, value: record.value }, record.key, index, step())
         }, function (result) {
             if (result != 0) {
                 ok(result > 0, 'went backwards')
@@ -331,34 +344,27 @@ Merge.prototype.update = cadence(function (step) {
 })
 
 Merge.prototype.merge = cadence(function (step) {
+    // todo: track both greatest and least transaction id.
+    var candidate = { transactionId: 0 }
+    var shared = 0
     var unmerged
-    step([function () {
+    step([function () { // gah! cleanup! couldn't see it. ack! ack! ack!
         if (this._primary) this._primary.unlock()
+        if (shared) this._db._sequester.unlock()
     }], function () {
         this._db._sequester.exclude(step())
     }, function () {
-        this._db._sequester.share(step(step, [function () { this._db._sequester.unlock() }]))
-        unmerged = this._db._staging
-        this._db._staging = unmerged == 'secondary' ? 'tertiary' : 'secondary'
+        unmerged = this._db._stages[this._db._stages.length - 1]
+        this._db._sequester.share(step())
         this._db._sequester.unlock()
     }, function () {
-        var tree = this['_' + unmerged]
-        tree.iterator(step())
+        shared++
+        unmerged.tree.iterator(step())
     }, function (stage) {
-        var candidate = { transactionId: 0 }
-        // use a mutator on the stage, the nice thing is that so long as we hold
-        // the mutator on the stage, the Locket iterator will block until we've
-        // moved the key, we're moving through the leaf pages, deleting
-        // everything, or, hey, uh, why don't we have a quadiary tree?
-        //
-        // okay, also, let's just queue of this shifting, have a counter, when
-        // the user calls merge, just flip a counter? yes.
-        //
-        // mrph, we could move the merged stage into an archive folder, with a
-        // date stamped name, and then rm -rf the directory, or, optionally, not
-        // rm -rf the directory, preserving all logs for every body, forever.
         step(function (more) {
             if (!more) {
+                stage.unlock()
+                // do you need to unlock when you hit the end?
                 step(null)
             } else {
                 step(function (index) {
@@ -366,13 +372,13 @@ Merge.prototype.merge = cadence(function (step) {
                     step(function () {
                         stage.get(index, step())
                     }, function (record) {
-                        if (this._db._transactions[record.transactionId]) {
-                            if (candidate.key != record.key) {
-                                this._greatestTransactionId = Math.max(candidate.transactionId, this._greatestTransactionId)
-                                delete this._db._transactions[candidate.transactionId]
-                                this._update(candidate, step())
+                        if (this._db._successfulTransactions[record.transactionId]) {
+                            if (candidate.transactionId && candidate.key != record.key) {
+                                // what? nooooo. what? whatcha doin' there champ?
+                                //delete this._db._successfulTransactions[candidate.transactionId]
+                                this.update(candidate, step())
                             }
-                            record = candidate
+                            candidate = record
                         }
                     })
                 })(stage.length - stage.offset)
@@ -381,19 +387,65 @@ Merge.prototype.merge = cadence(function (step) {
             stage.next(step())
         })(null, true)
     }, function () {
+        if (candidate.transactionId) {
+            this.update(candidate, step())
+        }
+    }, function () {
         if (this._primary) this._primary.unlock()
         delete this._primary
     }, function () {
         this._db._sequester.exclude(step())
+        shared--
+        this._db._sequester.unlock()
     }, function () {
-        var stages = this._db.stages
+        this._db._stages.pop()
+        this._db._sequester.share(step())
+        this._db._sequester.unlock()
+    }, function () {
+        // todo: purge transactions
+        shared++
+        var from = path.join(this._db.location, 'stages', unmerged.name)
+        var filename = tz(Date.now(), '%F-%H-%M-%S-%3N')
+        var to = path.join(this._db.location, 'archive', filename)
+        // todo: note that archive and stage need to be on same file system.
+        step(function () {
+            fs.rename(from, to, step())
+        }, function () {
+            // todo: rimraf the archive file if we're not preserving the archive
+        })
     })
 })
 
 Locket.prototype._merge = cadence(function (step) {
-    this._mergeRequests++
-    if (this._mergeRequests == 0) {
-        new Merge(this).merge(step())
+    if (this._mergeRequests++ == 0) {
+        step(function () {
+            // first merge any extras down to one.
+            step(function () {
+                if (this._stages.length == 1) step(null)
+                else new Merge(this).merge(step())
+            })()
+        }, function () {
+            // add a new stage.
+            var letter = alphabet[(alphabet.indexOf(this._stages[0].name) + 1) % alphabet.length]
+            // we need to stop the world just long enough to unshift the new
+            // stage, it will happen in one tick, super quick.
+            step(function () {
+                createStage.call(this, letter, step())
+            }, function (stage) {
+                step(function () {
+                    this._sequester.exclude(step())
+                }, function () {
+                    this._stages.unshift(stage)
+                    this._sequester.unlock()
+                })
+            })
+        }, function () {
+            // once again, first merge any extras down to one.
+            step(function () {
+                if (this._stages.length == 1) step(null)
+                else new Merge(this).merge(step())
+            })()
+        })
     }
 })
 
@@ -454,6 +506,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
             step(function () {
                 cursor.insert(transaction.id, transaction.id, ~ cursor.index, step())
             }, function () {
+                this._successfulTransactions[transaction.id] = true
                 cursor.unlock()
             })
         })

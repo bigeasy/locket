@@ -10,8 +10,9 @@
     "abstract-leveldown": "~0.7.0",
     "sequester": "0.0.1",
     "rimraf": "~2.2",
+    "timezone": "0.0.22",
     "mkdirp": "~0.3",
-    "b-tree": "0.0.3"
+    "b-tree": "0.0.4"
   }
 , "devDependencies": { "proof": "0.0.32" }
 , "scripts" : { "test": "proof platform win32 && proof test */*/*.t.js || t/test" }
