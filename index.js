@@ -520,5 +520,3 @@ Locket.prototype._close = cadence(function (step, operations) {
         this._isOpened = false
     })
 })
-
-// vim: sw=4 ts=4:
