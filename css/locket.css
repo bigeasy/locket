@@ -1,64 +1,107 @@
 /*-----------------------------------*\
     $GRID
   \*-----------------------------------*/
-.container {
-  /* Whatever you want. They’re your oats. */
+* {
+  margin: 0;
+  padding: 0;
+  position: relative;
+  -webkit-box-sizing: border-box;
+  /* border-box is new to me, AG */
 
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 0;
-  padding: 0 1.5rem;
+  -moz-box-sizing: border-box;
+  /* https://pinboard.in/u:alan/t:border/t:box */
+
+  box-sizing: border-box;
 }
 .grid {
-  margin-left: -3%;
-  max-width: 105%;
+  max-width: 100%;
 }
 .unit {
+  /*  outline: 1px solid red; */
+
   display: inline-block;
   *display: inline;
   *zoom: 1;
   vertical-align: top;
-  margin-left: 3%;
-  margin-right: -0.25em;
   /* Clearfix */
 
   overflow: hidden;
   *overflow: visible;
 }
 .span-grid {
-  width: 97%;
+  width: 100%;
 }
 .one-of-two {
-  width: 47%;
+  width: 50%;
 }
 .one-of-three {
-  width: 30.36%;
+  width: 33.333333333%;
 }
 .two-of-three {
-  width: 63.666666666%;
+  width: 66.666666666%;
 }
 .one-of-four {
-  width: 22.05%;
+  width: 25%;
 }
 .three-of-four {
-  width: 72%;
+  width: 75%;
 }
 .one-of-five {
-  width: 17.07%;
+  width: 20%;
 }
 .two-of-five {
-  width: 37%;
+  width: 40%;
 }
 .three-of-five {
-  width: 57%;
+  width: 60%;
 }
 .four-of-five {
-  width: 77%;
+  width: 80%;
 }
 /* vim: set ts=4 sw=4: */
+html {
+  background: #fefefe;
+  font-size: 100%;
+  color: #3d2258;
+}
 body {
-  margin: 0px;
-  padding: 24pt 0;
   font-family: Helvetica;
+  margin: 0 auto;
+  padding: 0 0;
+}
+img {
+  max-width: 100%;
+}
+.container {
+  /* Whatever you want. They’re your oats. */
+
+  max-width: 60em;
+  margin: 0 auto;
+  padding: 0 0;
+}
+.unit.benefit {
+  padding: 1em;
+  width: 33.333333333%;
+}
+.unit.benefit h2 {
+  text-align: center;
+  font-size: 1em;
+  margin-bottom: 1em;
+}
+.unit.verbiage {
+  width: 100%;
+}
+.unit.verbiage h2 {
+  font-size: 1em;
+  margin-bottom: 1em;
+}
+.unit.verbiage p {
+  margin-bottom: 1em;
+}
+.unit.description {
+  width: 75%;
+}
+.unit.sidebar {
+  width: 25%;
 }
 /* vim: set ts=4 sw=4: */

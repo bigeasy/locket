@@ -1,45 +1,46 @@
   /*-----------------------------------*\
     $GRID
   \*-----------------------------------*/
-
-  .container {
-    /* Whatever you want. They’re your oats. */
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 0 0;
-    padding: 0 1.5rem;
+  * {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    -webkit-box-sizing: border-box; /* border-box is new to me, AG */
+       -moz-box-sizing: border-box; /* https://pinboard.in/u:alan/t:border/t:box */
+            box-sizing: border-box;
   }
 
-  .grid {
-    margin-left: -3%;
-    max-width: 105%;
-  }
+.container {
+}
+
+.grid {
+    max-width: 100%;
+}
 
 .unit {
+/*  outline: 1px solid red; */
   display: inline-block;
   *display: inline;
   *zoom: 1;
   vertical-align: top;
-  margin-left: 3%;
-  margin-right: -.25em;
   /* Clearfix */
   overflow: hidden;
   *overflow: visible;
 }
 
-.span-grid { width: 97%; }
+.span-grid { width: 100%; }
 
-.one-of-two { width: 47%; }
+.one-of-two { width: 50%; }
 
-.one-of-three { width: 30.36%; }
-.two-of-three { width: 63.666666666%; }
+.one-of-three { width: 33.333333333%; }
+.two-of-three { width: 66.666666666%; }
 
-.one-of-four { width: 22.05%; }
-.three-of-four { width: 72%; }
+.one-of-four { width: 25%; }
+.three-of-four { width: 75%; }
 
-.one-of-five { width: 17.07%; }
-.two-of-five { width: 37%; }
-.three-of-five { width: 57%; }
-.four-of-five { width: 77%; }
+.one-of-five { width: 20%; }
+.two-of-five { width: 40%; }
+.three-of-five { width: 60%; }
+.four-of-five { width: 80%; }
 
 /* vim: set ts=4 sw=4: */
