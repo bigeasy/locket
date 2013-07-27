@@ -49,6 +49,24 @@ a way to know which stage was active, which was merging. We can make this less
 painful by taking a sip of each stage so we can launch with an empty stage if
 one exists, merging the full one.
 
+## Revision Id Forever
+
+I'm not sure why I'm not keeping the revision id in the main table. It costs
+nothing and then I can use my able, baker stage names, which I won't do, but it
+won't matter what order things are merged, because I'll have a revision id and I
+won't overwrite any record.
+
+## Replication
+
+Now that we have an archive, we can transport it to other servers as a log, and
+replay it, in pretty much any order. Latest version wins. Simply drop the files
+into the staging area, push them onto the end of the queue, and balance. Just as
+performant as any merge.
+
+## Extract Iterators / Merge
+
+May as well extract our nice iterator and merge into `strata.merge`.
+
 ## Changes for Next Release
 
  * Initial commit of empty project. #2.
