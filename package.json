@@ -14,7 +14,7 @@
     "mkdirp": "~0.3",
     "b-tree": "0.0.4"
   }
-, "devDependencies": { "proof": "0.0.32" }
+, "devDependencies": { "proof": "0.0.33" }
 , "scripts" : { "test": "proof platform win32 && proof test */*/*.t.js || t/test" }
 , "engines" : { "node": "> 0.8.0" }
 , "homepage": "https://github.com/bigeasy/locket"
