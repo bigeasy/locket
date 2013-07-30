@@ -1,11 +1,5 @@
 module.exports = Locket
 
-var alphabet = '\
-    able baker charlie dog easy fox george how item \
-    jig king love mike nan oboe peter queen roger \
-    sugar tare uncle victor william x-ray yoke zebra \
-'.trim().split(/\s+/)
-
 var Sequester         = require('sequester')
 var Strata            = require('b-tree')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
@@ -168,9 +162,9 @@ function compareKeyAndTransaction (left, right) {
     return left.transactionId - right.transactionId
 }
 
-function createStageStrata (letter) {
+function createStageStrata (name) {
     return new Strata({
-        directory: path.join(this.location, 'stages', letter),
+        directory: path.join(this.location, 'stages', name),
         extractor: extractKeyAndTransaction,
         comparator: compareKeyAndTransaction,
         leafSize: 1024,
@@ -178,12 +172,14 @@ function createStageStrata (letter) {
     })
 }
 
-var createStage = cadence(function (step, letter) {
-    var strata = createStageStrata.call(this, letter)
-    var stage = { name: letter, tree: strata }
+var createStage = cadence(function (step, name) {
+    name = String(name)
+
+    var strata = createStageStrata.call(this, name)
+    var stage = { name: name, tree: strata }
 
     step (function () {
-        mkdirp(path.join(this.location, 'stages', letter), step())
+        mkdirp(path.join(this.location, 'stages', name), step())
     }, function () {
         strata.create(step())
     }, function () {
@@ -238,9 +234,14 @@ Locket.prototype._open = cadence(function (step, options) {
         this._transactions.open(step())
     }, function () {
         fs.readdir(path.join(this.location, 'stages'), step())
-    }, function (letters) {
+    }, function (files) {
+        // todo: replication is probably going to mean that no stages is okay.
+        if (exists && !files.length) {
+            throw new Error('no stages, what happened?')
+        }
+        files.sort().reverse()
         step(function () {
-            letters.forEach(step([], function (letter) {
+            files.forEach(step([], function (letter) {
                 var strata = createStageStrata.call(this, letter)
                 step(function () {
                     strata.open(step())
@@ -250,8 +251,7 @@ Locket.prototype._open = cadence(function (step, options) {
             }))
         }, function (stages) {
             this._stages = stages
-            var letter = alphabet.filter(function (letter) { return !~letters.indexOf(letter) }).shift()
-            createStage.call(this, letter, step())
+            createStage.call(this, files.length ? +(files[0]) + 1 : 1, step())
         }, function (stage) {
             this._stages.unshift(stage)
         })
@@ -426,11 +426,11 @@ Locket.prototype._merge = cadence(function (step) {
             })()
         }, function () {
             // add a new stage.
-            var letter = alphabet[(alphabet.indexOf(this._stages[0].name) + 1) % alphabet.length]
+            //
             // we need to stop the world just long enough to unshift the new
             // stage, it will happen in one tick, super quick.
             step(function () {
-                createStage.call(this, letter, step())
+                createStage.call(this, +(this._stages[0].name) + 1, step())
             }, function (stage) {
                 step(function () {
                     this._sequester.exclude(step())
