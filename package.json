@@ -1,29 +1,35 @@
-{ "name" : "locket"
-, "version" : "0.0.0"
-, "description" : "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/0 b-tree for use with LevelUP."
-, "url" : "http://bigeasy.github.com/locket"
-, "keywords" : ["btree", "leveldb", "levelup", "binary", "database", "json", "b-tree", "concurrent", "persistence"]
-, "author" : "Alan Gutierrez <alan@prettyrobots.com>"
-, "contributors" : []
-, "dependencies": {
-    "cadence": "0.0.23",
-    "abstract-leveldown": "~0.7.0",
-    "sequester": "0.0.1",
-    "rimraf": "~2.2",
-    "timezone": "0.0.22",
-    "mkdirp": "~0.3",
-    "b-tree": "0.0.4"
-  }
-, "devDependencies": { "proof": "0.0.33" }
-, "scripts" : { "test": "proof platform win32 && proof test */*/*.t.js || t/test" }
-, "engines" : { "node": "> 0.8.0" }
-, "homepage": "https://github.com/bigeasy/locket"
-, "licenses": [
-  { "type": "MIT"
-  , "url": "http://github.com/bigeasy/locket/raw/master/LICENSE"
-  }]
-, "repository":
-  { "type": "git"
-  , "url": "http://github.com/bigeasy/locket.git"
-  }
+{
+    "name":         "locket",
+    "version":      "0.0.0",
+    "description":  "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
+    "url": "http://bigeasy.github.com/locket",
+    "keywords" : [
+      "btree", "leveldb", "levelup", "binary", "database", "json", "b-tree", "concurrent", "persistence"
+    ],
+    "author" : "Alan Gutierrez <alan@prettyrobots.com>",
+    "contributors" : [],
+    "dependencies": {
+        "cadence": "0.0.23",
+        "abstract-leveldown": "~0.7.0",
+        "sequester": "0.0.1",
+        "rimraf": "~2.2",
+        "timezone": "0.0.22",
+        "mkdirp": "~0.3",
+        "b-tree": "0.0.4"
+    },
+    "devDependencies": {
+        "proof": "0.0.33"
+    },
+    "scripts": {
+        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+    },
+    "homepage": "https://github.com/bigeasy/locket",
+    "licenses": [{
+        "type": "MIT",
+        "url": "http://github.com/bigeasy/locket/raw/master/LICENSE"
+    }],
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/bigeasy/locket.git"
+    }
 }
