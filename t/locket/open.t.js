@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(6, function (step, equal, deepEqual) {
+require('proof')(7, function (step, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
     var tmp = path.join(__dirname, '../tmp')
@@ -15,7 +15,7 @@ require('proof')(6, function (step, equal, deepEqual) {
             rimraf(tmp, step())
         }, [function () {
             locket = new Locket(invalid)
-            locket.open(step())
+            locket.open({ createIfMissing: false }, step())
         }, function (_, error) {
           equal(error.message, 'does not exist')
         }])
@@ -47,6 +47,15 @@ require('proof')(6, function (step, equal, deepEqual) {
         }, function () {
             locket.close(step())
         })
+    }, function () {
+        var existing = path.join(tmp, 'empty')
+        var locket
+        step([function () {
+            locket = new Locket(existing)
+            locket.open({ createIfMissing: false, errorIfExists: true }, step())
+        }, function (_, error) {
+            equal(error.message, 'Locket database already exists', 'errorIfExists')
+        }])
     }, function () {
         var empty = path.join(tmp, 'empty')
         var locket

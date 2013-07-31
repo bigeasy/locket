@@ -195,7 +195,7 @@ Locket.prototype._open = cadence(function (step, options) {
         var readdir = step([function () {
             fs.readdir(this.location, step())
         }, 'ENOENT', function (_, error) {
-            if (options.createIfMissing) {
+            if (options.createIfMissing == null || options.createIfMissing) {
                 exists = false
                 mkdirp(this.location, step(readdir, 0))
             } else {
@@ -203,6 +203,9 @@ Locket.prototype._open = cadence(function (step, options) {
             }
         }])(1)
     }, function (listing) {
+        if (exists && options.errorIfExists) {
+            throw new Error('Locket database already exists')
+        }
         var subdirs = [ 'archive', 'primary', 'stages', 'transactions' ]
         if (exists) {
           listing = listing.filter(function (file) { return file[0] != '.' }).sort()
