@@ -24,17 +24,18 @@
     },
     "dependencies":
     {
-                    "cadence": "0.0.23",
+                    "cadence":            "0.0.23",
                     "abstract-leveldown": "~0.7.0",
-                    "sequester": "0.0.1",
-                    "rimraf": "~2.2",
-                    "timezone": "0.0.22",
-                    "mkdirp": "~0.3",
-                    "b-tree": "0.0.4"
+                    "sequester":          "0.0.1",
+                    "rimraf":             "~2.2",
+                    "timezone":           "0.0.22",
+                    "mkdirp":             "~0.3",
+                    "b-tree":             "0.0.4"
     },
     "devDependencies":
     {
-                    "proof": "0.0.34"
+                    "proof":  "0.0.34",
+                    "tap":    "*"
     },
     "scripts":
     {
