@@ -264,7 +264,7 @@ Locket.prototype._open = cadence(function (step, options) {
         this._mergeRequests = 0
         this._successfulTransactions = {}
         this._nextTransactionId = 1
-        this._transactions.iterator(step())
+        this._transactions.iterator(this._transactions.left, step())
     }, function (transactions) {
         step(function (more) {
             if (!more) {
@@ -362,7 +362,7 @@ Merge.prototype.merge = cadence(function (step) {
         this._db._sequester.unlock()
     }, function () {
         shared++
-        unmerged.tree.iterator(step())
+        unmerged.tree.iterator(unmerged.tree.left, step())
     }, function (stage) {
         step(function (more) {
             if (!more) {
