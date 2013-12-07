@@ -70,7 +70,7 @@ Iterator.prototype._forward = cadence(function (step, name) {
         if (more) {step(function () {
             cursor.get(index, step())
         }, function (record) {
-        // todo: check that id is in succuessful transaction.
+        // todo: check that id is in successful transaction.
             step(function () {
                 if (++index < cursor.length) return true
                 else step(function () {
