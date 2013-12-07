@@ -14,41 +14,6 @@ var path = require('path')
 var cadence = require('cadence')
 var mkdirp  = require('mkdirp')
 
-function serializeA (object, key) {
-    console.log(key, object)
-    if (key) {
-        var buffer = new Buffer(Buffer.byteLength(object))
-        new Buffer(object).copy(buffer, 0)
-    } else {
-        if (!object.value) throw new Error
-        var header = [ object.type, object.transactionId || 0, object.key.length ].join(' ') + '\0'
-        var buffer = new Buffer(Buffer.byteLength(header) + object.key.length + object.value.length)
-        buffer.write(header)
-        new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
-        new Buffer(object.value).copy(buffer, Buffer.byteLength(header) + object.key.length)
-    }
-    return buffer
-}
-
-function deserializeA (buffer) {
-    throw new Error
-    console.log(buffer)
-    for (var i = 0; buffer[i]; i++);
-    var header = buffer.toString('utf8', 0, i).split(' ')
-    var length = +(header[2])
-    var key = new Buffer(length)
-    buffer.copy(key, 0, i, i + length)
-    var value = new Buffer(buffer.length - (i + length))
-    buffer.copy(value, i + length)
-    return {
-        type: header[0],
-        transactionId: +(header[1]),
-        key: key,
-        value: value
-    }
-}
-
-// feel like I should just always have a transaction id of zero.
 function serialize (object, key) {
     if (key) {
         var header = [ object.type, object.transactionId || 0 ].join(' ') + ' '
@@ -151,9 +116,7 @@ Iterator.prototype._next = cadence(function (step) {
             step(function (stage) {
                 step(function () {
                     //console.log({ key: this._start, transactionId: 0 })
-                    stage.tree.iterator(stage.name == 'primary'
-                                       ? this._start
-                                       : { key: this._start, transactionId: 0 }, step())
+                    stage.tree.iterator({ key: this._start, transactionId: 0 }, step())
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
                     this._cursors[stage.name] = {
@@ -210,21 +173,11 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
-function extractKey (record) {
-    return record.key
+function extract (record) {
+    return { key: record.key, transactionId: record.transactionId || 0 }
 }
 
-function compareKey (left, right) {
-    if (left < right) return -1
-    if (left > right) return 1
-    return 0
-}
-
-function extractKeyAndTransaction (record) {
-    return { key: record.key, transactionId: record.transactionId }
-}
-
-function compareKeyAndTransaction (left, right) {
+function compare (left, right) {
     if (left.key < right.key) return -1
     if (left.key > right.key) return 1
     return left.transactionId - right.transactionId
@@ -233,8 +186,8 @@ function compareKeyAndTransaction (left, right) {
 function createStageStrata (name) {
     return new Strata({
         directory: path.join(this.location, 'stages', name),
-        extractor: extractKeyAndTransaction,
-        comparator: compareKeyAndTransaction,
+        extractor: extract,
+        comparator: compare,
         serialize: serialize,
         deserialize: deserialize,
         leafSize: 1024,
@@ -290,10 +243,10 @@ Locket.prototype._open = cadence(function (step, options) {
     }, function () {
         this._primary = new Strata({
             directory: path.join(this.location, 'primary'),
-            extractor: extractKey,
-            comparator: compareKey,
-            serialize: serializeA,
-            deserialize: deserializeA,
+            extractor: extract,
+            comparator: compare,
+            serialize: serialize,
+            deserialize: deserialize,
             leafSize: 1024,
             branchSize: 1024
         })
@@ -393,7 +346,7 @@ Merge.prototype.update = cadence(function (step, record) {
             this._primary = $
             return this._primary.index
         }))} else {
-            this._primary.indexOf(record.key, step())
+            this._primary.indexOf(record, step())
         }
     }, function (index) {
         if (index < 0) return ~ index
