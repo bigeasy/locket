@@ -48,8 +48,8 @@ function deserializeA (buffer) {
     }
 }
 
+// feel like I should just always have a transaction id of zero.
 function serialize (object, key) {
-    console.log(key, object)
     if (key) {
         var header = [ object.type, object.transactionId || 0 ].join(' ') + '\0'
         var buffer = new Buffer(Buffer.byteLength(header) + object.key.length)
@@ -66,15 +66,14 @@ function serialize (object, key) {
     return buffer
 }
 
-function deserialize (buffer) {
-    console.log(buffer)
+function deserialize (buffer, key) {
     for (var i = 0; buffer[i]; i++);
     var header = buffer.toString('utf8', 0, i).split(' ')
     var length = +(header[2])
     var key = new Buffer(length)
-    buffer.copy(key, 0, i, i + length)
-    var value = new Buffer(buffer.length - (i + length))
-    buffer.copy(value, i + length)
+    buffer.copy(key, 0, i + 1, i  + 1 + length)
+    var value = new Buffer(buffer.length - (i + 1 + length))
+    buffer.copy(value, 0, i + 1 + length)
     return {
         type: header[0],
         transactionId: +(header[1]),
@@ -348,7 +347,7 @@ Locket.prototype._open = cadence(function (step, options) {
             var offset = transactions.offset
             var length = transactions.length
             step(function (i) {
-                cursor.get(i + offset, step())
+                transactions.get(i + offset, step())
             }, function (transactionId) {
                 this._successfulTransactions[transactionId] = true
                 this._nextTransactionId = Math.max(this._nextTransactionId, transactionId + 1)

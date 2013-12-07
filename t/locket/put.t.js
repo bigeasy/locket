@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (step, equal, deepEqual) {
+require('proof')(2, function (step, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
 
@@ -25,6 +25,15 @@ require('proof')(1, function (step, equal, deepEqual) {
             locket.get('a', step())
         }, function (got) {
             deepEqual(JSON.parse(got), { value: 1 }, 'put')
+            locket.close(step())
+        }, function () {
+            locket = new Locket(location)
+            locket.open(step())
+        }, function () {
+            locket.get('a', step())
+        }, function (got) {
+            deepEqual(JSON.parse(got), { value: 1 }, 'reopen')
+            locket.close(step())
         })
     })
 })
