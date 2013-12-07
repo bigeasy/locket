@@ -51,13 +51,13 @@ function deserializeA (buffer) {
 // feel like I should just always have a transaction id of zero.
 function serialize (object, key) {
     if (key) {
-        var header = [ object.type, object.transactionId || 0 ].join(' ') + '\0'
+        var header = [ object.type, object.transactionId || 0 ].join(' ') + ' '
         var buffer = new Buffer(Buffer.byteLength(header) + object.key.length)
         buffer.write(header)
         new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
     } else {
         var value = object.type == 'del' ? '' : object.value
-        var header = [ object.type, object.transactionId || 0, object.key.length ].join(' ') + '\0'
+        var header = [ object.type, object.transactionId || 0, object.key.length ].join(' ') + ' '
         var buffer = new Buffer(Buffer.byteLength(header) + object.key.length + value.length)
         buffer.write(header)
         new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
@@ -66,8 +66,8 @@ function serialize (object, key) {
     return buffer
 }
 
-function deserialize (buffer, key) {
-    for (var i = 0; buffer[i]; i++);
+function deserialize (buffer, key)  {
+    for (var i = 0, count = key ? 2 : 3; buffer[i] != 0x20 || --count; i++);
     var header = buffer.toString('utf8', 0, i).split(' ')
     var length = +(header[2])
     var key = new Buffer(length)
