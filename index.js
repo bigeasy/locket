@@ -165,7 +165,7 @@ Iterator.prototype._next = cadence(function (step) {
                 else step()(null, winner.key, winner.value)
             })
         } else {
-            step()(new Error('not found'))
+            step()(new Error('NotFoundError: not found'))
         }
     })
 })
@@ -332,8 +332,9 @@ Locket.prototype._get = cadence(function (step, key, options) {
         step(function () {
             iterator.end(step())
         }, function () {
+            value = ('asBuffer' in options) && !options.asBuffer ? value.toString() : value
             if (bytewise($key, new Buffer(key)) == 0) return step()(null, value)
-            else step()(new Error('not found'))
+            else step()(new Error('NotFoundError: not found'))
         })
     })
 })

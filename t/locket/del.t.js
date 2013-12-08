@@ -27,7 +27,7 @@ require('proof')(1, function (step, equal, deepEqual) {
             console.log('HERE X')
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'not found', 'not found')
+            equal(error.message, 'NotFoundError: not found', 'not found')
         }])
     })
 })

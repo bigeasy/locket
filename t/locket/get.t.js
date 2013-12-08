@@ -22,7 +22,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'not found', 'get empty')
+            equal(error.message, 'NotFoundError: not found', 'get empty')
         }])
     }, function () {
         var location = path.join(tmp, 'put')
@@ -37,7 +37,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'not found', 'not found')
+            equal(error.message, 'NotFoundError: not found', 'not found')
         }])
     })
 })
