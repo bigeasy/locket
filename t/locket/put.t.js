@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, ok, equal, deepEqual) {
+require('proof')(3, function (step, ok, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
 
