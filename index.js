@@ -88,7 +88,7 @@ Iterator.prototype._forward = cadence(function (step, name) {
                 if (more) cursor.get(index, step())
                 else step(null, record)
             }, function (next) {
-                if (next.key == record.key) record = next
+                if (bytewise(next.key, record.key) == 0) record = next
                 else step(null, record)
             })()
         })} else {
@@ -115,8 +115,7 @@ Iterator.prototype._next = cadence(function (step) {
             this._cursors = {}
             step(function (stage) {
                 step(function () {
-                    //console.log({ key: this._start, transactionId: 0 })
-                    stage.tree.iterator({ key: this._start, transactionId: 0 }, step())
+                    stage.tree.iterator({ key: new Buffer(this._start), transactionId: 0 }, step())
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
                     this._cursors[stage.name] = {
@@ -139,12 +138,18 @@ Iterator.prototype._next = cadence(function (step) {
             }.bind(this))
 
             var key = candidates.reduce(function (previous, current) {
-                return previous.record.key < current.record.key ? previous : current
+                return bitewise(previous.record.key,  current.record.key) < 0 ? previous : current
             }).record.key
 
             candidates = candidates.filter(function (candidate) {
-                return key == candidate.record.key
+                return bytewise(key, candidate.record.key) == 0
             })
+
+            // todo: error if the above reduces to zero. this is to remind us to
+            // test this case in code coverage.
+            if (candidates.length == 0) {
+                console.log(candidates.length)
+            }
 
             var winner = candidates.reduce(function (previous, current) {
                 return previous.record.transactionId > current.record.transactionId
@@ -174,13 +179,21 @@ function Locket (location) {
 util.inherits(Locket, AbstractLevelDOWN)
 
 function extract (record) {
+    // todo: can't I just return the record? Mebby, or mebby it confuzes things
+    // in the v8 compiler, different object types.
     return { key: record.key, transactionId: record.transactionId || 0 }
 }
 
+function bytewise (left, right) {
+    for (var i = 0, I = Math.min(left.length, right.length); i < I; i++) {
+        if (left[i] - right[i]) return left[i] - right[i]
+    }
+    return left.length - right.length
+}
+
 function compare (left, right) {
-    if (left.key < right.key) return -1
-    if (left.key > right.key) return 1
-    return left.transactionId - right.transactionId
+    var compare = bytewise(left.key, right.key)
+    return compare ? compare : left.transactionId - right.transactionId
 }
 
 function createStageStrata (name) {
@@ -316,11 +329,10 @@ Locket.prototype._get = cadence(function (step, key, options) {
     step(function () {
         iterator.next(step())
     }, function ($key, value) {
-        //console.log($key, value)
         step(function () {
             iterator.end(step())
         }, function () {
-            if ($key == key) return step()(null, value)
+            if (bytewise($key, new Buffer(key)) == 0) return step()(null, value)
             else step()(new Error('not found'))
         })
     })
@@ -340,13 +352,14 @@ function Merge (db) {
 }
 
 Merge.prototype.update = cadence(function (step, record) {
+    var key = { key: record.key, transactionId: 0 }
     this._greatest = Math.max(record.transactionId, this._greatest)
     var insert = step(function () {
-        if (!this._primary) {this._db._primary.mutator(record.key, step(step, function ($) {
+        if (!this._primary) {this._db._primary.mutator(key, step(step, function ($) {
             this._primary = $
             return this._primary.index
         }))} else {
-            this._primary.indexOf(record, step())
+            this._primary.indexOf(key, step())
         }
     }, function (index) {
         if (index < 0) return ~ index
@@ -359,7 +372,11 @@ Merge.prototype.update = cadence(function (step, record) {
     }, function (index) {
         if (record.type == 'put') step(function () {
             // todo: probably re-extract?
-            this._primary.insert({ key: record.key, value: record.value }, record.key, index, step())
+            this._primary.insert({
+                transactionId: 0, // todo: different object type?
+                key: record.key,
+                value: record.value
+            }, key, index, step())
         }, function (result) {
             if (result != 0) {
                 ok(result > 0, 'went backwards')
@@ -487,8 +504,10 @@ Locket.prototype._batch = cadence(function (step, array, options) {
             var record = {
                 type: operation.type,
                 transactionId: transaction.id,
-                key: operation.key,
-                value: operation.value
+                key: new Buffer(operation.key)
+            }
+            if (operation.type != 'del') {
+                record.value = new Buffer(operation.value)
             }
             step(function () {
                 if (transaction.cursor) {
