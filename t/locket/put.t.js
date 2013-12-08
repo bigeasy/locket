@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, equal, deepEqual) {
+require('proof')(2, function (step, ok, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
 
@@ -32,6 +32,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, function () {
             locket.get('a', step())
         }, function (got) {
+            ok(Buffer.isBuffer(got), 'is buffer')
             deepEqual(JSON.parse(got), { value: 1 }, 'reopen')
             locket.close(step())
         })
