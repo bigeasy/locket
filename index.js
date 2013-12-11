@@ -115,7 +115,14 @@ Iterator.prototype._next = cadence(function (step) {
             this._cursors = {}
             step(function (stage) {
                 step(function () {
-                    stage.tree.iterator({ key: new Buffer(this._start), transactionId: 0 }, step())
+                    if (this._start) {
+                        stage.tree.iterator({
+                            key: new Buffer(this._start),
+                            transactionId: 0
+                        }, step())
+                    } else {
+                        stage.tree.iterator(stage.tree.left, step())
+                    }
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
                     this._cursors[stage.name] = {
@@ -165,7 +172,7 @@ Iterator.prototype._next = cadence(function (step) {
                 else step()(null, winner.key, winner.value)
             })
         } else {
-            step()(new Error('NotFoundError: not found'))
+            step(null)
         }
     })
 })
@@ -332,9 +339,11 @@ Locket.prototype._get = cadence(function (step, key, options) {
         step(function () {
             iterator.end(step())
         }, function () {
-            value = ('asBuffer' in options) && !options.asBuffer ? value.toString() : value
-            if (bytewise($key, new Buffer(key)) == 0) return step()(null, value)
-            else step()(new Error('NotFoundError: not found'))
+            if ($key && value) {
+                value = ('asBuffer' in options) && !options.asBuffer ? value.toString() : value
+                if (bytewise($key, new Buffer(key)) == 0) return step()(null, value)
+            }
+            step()(new Error('NotFoundError: not found'))
         })
     })
 })
@@ -345,6 +354,10 @@ Locket.prototype._put = function (key, value, options, callback) {
 
 Locket.prototype._del = function (key, options, callback) {
     this._batch([{ type: 'del', key: key }], options, callback)
+}
+
+Locket.prototype._iterator = function (options) {
+    return new Iterator(this, options)
 }
 
 function Merge (db) {
