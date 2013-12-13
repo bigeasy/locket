@@ -47,10 +47,16 @@ function deserialize (buffer, key)  {
     }
 }
 
+function isFalse (options, property) {
+    return !!((property in options) && !options[property])
+}
+
 function Iterator (db, options) {
     this._db = db
     this._start = options.start
     this._limit = options.limit
+    this._keyAsBuffer = !isFalse(options, 'keyAsBuffer')
+    this._valueAsBuffer = !isFalse(options, 'valueAsBuffer')
 }
 util.inherits(Iterator, AbstractIterator)
 
@@ -168,8 +174,12 @@ Iterator.prototype._next = cadence(function (step) {
                     this._forward(candidate.name, step())
                 }));
             }, function () {
-                if (winner.type == 'del') this._next(step())
-                else step()(null, winner.key, winner.value)
+                if (winner.type == 'del') {
+                    this._next(step())
+                } else {
+                    step()(null, this._keyAsBuffer ? winner.key : winner.key.toString(),
+                                 this._valueAsBuffer ? winner.value : winner.value.toString())
+                }
             })
         } else {
             step(null)
@@ -332,8 +342,8 @@ Locket.prototype._open = cadence(function (step, options) {
 })
 
 Locket.prototype._get = cadence(function (step, key, options) {
-    console.log('here')
-    var iterator = new Iterator(this, { start: key, limit: 1 })
+    // todo: use iterator valueAsBuffer.
+    var iterator = new Iterator(this, { start: key, limit: 1, options: options })
     step(function () {
         iterator.next(step())
     }, function ($key, value) {

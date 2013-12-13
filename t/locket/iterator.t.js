@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (step, equal, deepEqual) {
+require('proof')(3, function (step, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
 
@@ -21,9 +21,9 @@ require('proof')(1, function (step, equal, deepEqual) {
             locket.open({ createIfMissing: true }, step())
         }, function () {
             locket.batch([
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) },
-              { type: 'put', key: 'b', value: JSON.stringify({ value: 2 }) },
-              { type: 'put', key: 'c', value: JSON.stringify({ value: 3 }) }
+              { type: 'put', key: 'a', value: 'able' },
+              { type: 'put', key: 'b', value: 'baker' },
+              { type: 'put', key: 'c', value: 'charlie' }
             ], step())
         }, function () {
             var keys = [], iterator = locket.iterator()
@@ -37,6 +37,28 @@ require('proof')(1, function (step, equal, deepEqual) {
                 })()
             }, function () {
                 deepEqual(keys, [ 'a', 'b', 'c' ], 'left most to end')
+                iterator.end(step())
+            })
+        }, function () {
+            var keys = [], values = [], iterator = locket.iterator({
+                keyAsBuffer: false,
+                valueAsBuffer: false
+            })
+            step(function () {
+                // todo: better way to break outer?
+                step(function () {
+                    iterator.next(step())
+                }, function (key, value) {
+                    if (key && value) {
+                        keys.push(key)
+                        values.push(value)
+                    } else {
+                        step(null)
+                    }
+                })()
+            }, function () {
+                deepEqual(keys, [ 'a', 'b', 'c' ], 'keys not as buffer')
+                deepEqual(values, [ 'able', 'baker', 'charlie' ], 'values not as buffer')
                 iterator.end(step())
             })
         }, function () {
