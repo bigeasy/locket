@@ -13,7 +13,7 @@ require('proof')(1, function (step, equal, deepEqual) {
 
     step(function () {
         var location = path.join(tmp, 'put')
-        var locket, iterator, keys = []
+        var locket
         step(function () {
             rimraf(location, step())
         }, function () {
@@ -26,17 +26,19 @@ require('proof')(1, function (step, equal, deepEqual) {
               { type: 'put', key: 'c', value: JSON.stringify({ value: 3 }) }
             ], step())
         }, function () {
-            iterator = locket.iterator()
-            // todo: better way to break outer?
+            var keys = [], iterator = locket.iterator()
             step(function () {
-                iterator.next(step())
-            }, function (key, value) {
-                if (key && value) keys.push(key.toString())
-                else step(null)
-            })()
-        }, function () {
-            deepEqual(keys, [ 'a', 'b', 'c' ], 'left most to end')
-            iterator.end(step())
+                // todo: better way to break outer?
+                step(function () {
+                    iterator.next(step())
+                }, function (key, value) {
+                    if (key && value) keys.push(key.toString())
+                    else step(null)
+                })()
+            }, function () {
+                deepEqual(keys, [ 'a', 'b', 'c' ], 'left most to end')
+                iterator.end(step())
+            })
         }, function () {
             locket.close(step())
         })
