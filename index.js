@@ -532,7 +532,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
                 key: new Buffer(operation.key)
             }
             if (operation.type != 'del') {
-                record.value = new Buffer(operation.value)
+                record.value = new Buffer(operation.value.toString())
             }
             step(function () {
                 if (transaction.cursor) {
