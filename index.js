@@ -237,7 +237,7 @@ Locket.prototype._open = cadence(function (step, options) {
     step(function () {
         var readdir = step([function () {
             fs.readdir(this.location, step())
-        }, 'ENOENT', function (_, error) {
+        }, /^ENOENT$/, function (_, error) {
             if (options.createIfMissing == null || options.createIfMissing) {
                 exists = false
                 mkdirp(this.location, step(readdir, 0))
@@ -332,6 +332,7 @@ Locket.prototype._open = cadence(function (step, options) {
 })
 
 Locket.prototype._get = cadence(function (step, key, options) {
+    console.log('here')
     var iterator = new Iterator(this, { start: key, limit: 1 })
     step(function () {
         iterator.next(step())
