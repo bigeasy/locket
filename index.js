@@ -47,16 +47,17 @@ function deserialize (buffer, key)  {
     }
 }
 
-function isFalse (options, property) {
-    return !!((property in options) && !options[property])
+function isTrue (options, property, defaultValue) {
+    return !!((property in options) ? options[property] : defaultValue)
 }
 
 function Iterator (db, options) {
     this._db = db
     this._start = options.start
     this._limit = options.limit
-    this._keyAsBuffer = !isFalse(options, 'keyAsBuffer')
-    this._valueAsBuffer = !isFalse(options, 'valueAsBuffer')
+    this._direction = isTrue(options, 'reverse', false) ? '_reverse' : '_forward'
+    this._keyAsBuffer = isTrue(options, 'keyAsBuffer', true)
+    this._valueAsBuffer = isTrue(options, 'valueAsBuffer', true)
 }
 util.inherits(Iterator, AbstractIterator)
 
@@ -114,6 +115,53 @@ Iterator.prototype._forward = cadence(function (step, name) {
     })
 })
 
+Iterator.prototype._seekBackward = cadence(function (step, name, test) {
+    var iterator = this._cursors[name]
+    step(function () {
+        if (iterator.index < 0) {
+            if (iterator.cursor.address == 1) step(null)
+            else throw new Error
+        }
+    }, function () {
+        iterator.cursor.get(iterator.index, step())
+    }, function (record) {
+        if (test.call(this, record)) {
+            step(null, record)
+        } else {
+            iterator.index--
+        }
+    })()
+})
+
+Iterator.prototype._reverse = cadence(function (step, name) {
+    var iterator = this._cursors[name]
+    delete iterator.record
+    if (iterator.cursor) step(function () {
+        this._seekBackward(name, function (record) {
+            return this._db._successfulTransactions[record.transactionId]
+        }, step())
+    }, function (record) {
+        if (record) {
+            step (function () {
+                this._seekBackward(name, function (skip) {
+                    return bytewise(skip.key, record.key) != 0
+                }, step())
+            }, function () {
+                return record
+            })
+        }
+    }, function (record) {
+        if (record) {
+            record.transactionId = record.transactionId || 0
+            iterator.record = record
+        } else {
+            iterator.cursor.unlock()
+            delete iterator.cursor
+        }
+        return record
+    })
+})
+
 Iterator.prototype._next = cadence(function (step) {
     var db = this._db
     step(function () {
@@ -121,22 +169,33 @@ Iterator.prototype._next = cadence(function (step) {
             this._cursors = {}
             step(function (stage) {
                 step(function () {
-                    if (this._start) {
-                        stage.tree.iterator({
-                            key: new Buffer(this._start),
-                            transactionId: 0
-                        }, step())
+                    if (this._direction == '_forward') {
+                        if (this._start) {
+                            stage.tree.iterator({
+                                key: new Buffer(this._start),
+                                transactionId: 0
+                            }, step())
+                        } else {
+                            stage.tree.iterator(stage.tree.left, step())
+                        }
                     } else {
-                        stage.tree.iterator(stage.tree.left, step())
+                        if (this._start) {
+                            throw new Error
+                        } else {
+                            stage.tree.iterator(stage.tree.right, step())
+                        }
                     }
                 }, function (cursor) {
                     var index = cursor.index < 0 ? ~ cursor.index : cursor.index
+                    if (this._direction == '_reverse' && ! this._start) {
+                        index = cursor.length - 1
+                    }
                     this._cursors[stage.name] = {
                         name: stage.name,
                         cursor: cursor,
                         index: index
                     }
-                    this._forward(stage.name, step())
+                    this[this._direction](stage.name, step())
                 })
             })([ { name: 'primary', tree: this._db._primary } ].concat(this._db._stages))
         })
@@ -171,7 +230,7 @@ Iterator.prototype._next = cadence(function (step) {
 
             step(function () {
                 candidates.forEach(step([], function (candidate) {
-                    this._forward(candidate.name, step())
+                    this[this._direction](candidate.name, step())
                 }));
             }, function () {
                 if (winner.type == 'del') {

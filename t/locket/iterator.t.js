@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(3, function (step, equal, deepEqual) {
+require('proof')(4, function (step, equal, deepEqual) {
     var path = require('path')
     var fs = require('fs')
 
@@ -59,6 +59,20 @@ require('proof')(3, function (step, equal, deepEqual) {
             }, function () {
                 deepEqual(keys, [ 'a', 'b', 'c' ], 'keys not as buffer')
                 deepEqual(values, [ 'able', 'baker', 'charlie' ], 'values not as buffer')
+                iterator.end(step())
+            })
+        }, function () {
+            var keys = [], iterator = locket.iterator({ reverse: true })
+            step(function () {
+                // todo: better way to break outer?
+                step(function () {
+                    iterator.next(step())
+                }, function (key, value) {
+                    if (key && value) keys.push(key.toString())
+                    else step(null)
+                })()
+            }, function () {
+                deepEqual(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
                 iterator.end(step())
             })
         }, function () {
