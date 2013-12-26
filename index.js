@@ -16,13 +16,13 @@ var mkdirp  = require('mkdirp')
 
 function serialize (object, key) {
     if (key) {
-        var header = [ object.type, object.transactionId || 0 ].join(' ') + ' '
+        var header = [ object.type, object.version || 0 ].join(' ') + ' '
         var buffer = new Buffer(Buffer.byteLength(header) + object.key.length)
         buffer.write(header)
         new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
     } else {
         var value = object.type == 'del' ? '' : object.value
-        var header = [ object.type, object.transactionId || 0, object.key.length ].join(' ') + ' '
+        var header = [ object.type, object.version || 0, object.key.length ].join(' ') + ' '
         var buffer = new Buffer(Buffer.byteLength(header) + object.key.length + value.length)
         buffer.write(header)
         new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
@@ -41,7 +41,7 @@ function deserialize (buffer, key)  {
     buffer.copy(value, 0, i + 1 + length)
     return {
         type: header[0],
-        transactionId: +(header[1]),
+        version: +(header[1]),
         key: key,
         value: value
     }
@@ -106,7 +106,7 @@ Iterator.prototype._forward = cadence(function (step, name) {
     }, function (record) {
         this._cursors[name].index = index
         if (record) {
-            record.transactionId = record.transactionId || 0
+            record.version = record.version || 0
             this._cursors[name].record = record
         } else {
             delete this._cursors[name].record
@@ -138,7 +138,7 @@ Iterator.prototype._reverse = cadence(function (step, name) {
     delete iterator.record
     if (iterator.cursor) step(function () {
         this._seekBackward(name, function (record) {
-            return this._db._successfulTransactions[record.transactionId]
+            return this._db._successfulTransactions[record.version]
         }, step())
     }, function (record) {
         if (record) {
@@ -152,7 +152,7 @@ Iterator.prototype._reverse = cadence(function (step, name) {
         }
     }, function (record) {
         if (record) {
-            record.transactionId = record.transactionId || 0
+            record.version = record.version || 0
             iterator.record = record
         } else {
             iterator.cursor.unlock()
@@ -173,7 +173,7 @@ Iterator.prototype._next = cadence(function (step) {
                         if (this._start) {
                             stage.tree.iterator({
                                 key: new Buffer(this._start),
-                                transactionId: 0
+                                version: 0
                             }, step())
                         } else {
                             stage.tree.iterator(stage.tree.left, step())
@@ -224,7 +224,7 @@ Iterator.prototype._next = cadence(function (step) {
             }
 
             var winner = candidates.reduce(function (previous, current) {
-                return previous.record.transactionId > current.record.transactionId
+                return previous.record.version > current.record.version
                      ? previous : current
             }).record
 
@@ -257,7 +257,7 @@ util.inherits(Locket, AbstractLevelDOWN)
 function extract (record) {
     // todo: can't I just return the record? Mebby, or mebby it confuzes things
     // in the v8 compiler, different object types.
-    return { key: record.key, transactionId: record.transactionId || 0 }
+    return { key: record.key, version: record.version || 0 }
 }
 
 function bytewise (left, right) {
@@ -269,7 +269,7 @@ function bytewise (left, right) {
 
 function compare (left, right) {
     var compare = bytewise(left.key, right.key)
-    return compare ? compare : left.transactionId - right.transactionId
+    return compare ? compare : left.version - right.version
 }
 
 function createStageStrata (name) {
@@ -390,9 +390,9 @@ Locket.prototype._open = cadence(function (step, options) {
             var length = transactions.length
             step(function (i) {
                 transactions.get(i + offset, step())
-            }, function (transactionId) {
-                this._successfulTransactions[transactionId] = true
-                this._nextTransactionId = Math.max(this._nextTransactionId, transactionId + 1)
+            }, function (version) {
+                this._successfulTransactions[version] = true
+                this._nextTransactionId = Math.max(this._nextTransactionId, version + 1)
             })(length - offset)
         }, function () {
             transactions.next(step())
@@ -436,8 +436,8 @@ function Merge (db) {
 }
 
 Merge.prototype.update = cadence(function (step, record) {
-    var key = { key: record.key, transactionId: 0 }
-    this._greatest = Math.max(record.transactionId, this._greatest)
+    var key = { key: record.key, version: 0 }
+    this._greatest = Math.max(record.version, this._greatest)
     var insert = step(function () {
         if (!this._primary) {this._db._primary.mutator(key, step(step, function ($) {
             this._primary = $
@@ -457,7 +457,7 @@ Merge.prototype.update = cadence(function (step, record) {
         if (record.type == 'put') step(function () {
             // todo: probably re-extract?
             this._primary.insert({
-                transactionId: 0, // todo: different object type?
+                version: 0, // todo: different object type?
                 key: record.key,
                 value: record.value
             }, key, index, step())
@@ -474,7 +474,7 @@ Merge.prototype.update = cadence(function (step, record) {
 
 Merge.prototype.merge = cadence(function (step) {
     // todo: track both greatest and least transaction id.
-    var candidate = { transactionId: 0 }
+    var candidate = { version: 0 }
     var shared = 0
     var unmerged
     step([function () { // gah! cleanup! couldn't see it. ack! ack! ack!
@@ -501,8 +501,8 @@ Merge.prototype.merge = cadence(function (step) {
                     step(function () {
                         stage.get(index, step())
                     }, function (record) {
-                        if (this._db._successfulTransactions[record.transactionId]) {
-                            if (candidate.transactionId && candidate.key != record.key) {
+                        if (this._db._successfulTransactions[record.version]) {
+                            if (candidate.version && candidate.key != record.key) {
                                 // what? nooooo. what? whatcha doin' there champ?
                                 //delete this._db._successfulTransactions[candidate.transactionId]
                                 this.update(candidate, step())
@@ -516,7 +516,7 @@ Merge.prototype.merge = cadence(function (step) {
             stage.next(step())
         })(null, true)
     }, function () {
-        if (candidate.transactionId) {
+        if (candidate.version) {
             this.update(candidate, step())
         }
     }, function () {
@@ -587,7 +587,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
         step(function (operation) {
             var record = {
                 type: operation.type,
-                transactionId: transaction.id,
+                version: transaction.id,
                 key: new Buffer(operation.key)
             }
             if (operation.type != 'del') {
