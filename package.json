@@ -30,12 +30,12 @@
                         "rimraf":             "~2.2",
                         "timezone":           "0.0.22",
                         "mkdirp":             "~0.3",
-                        "b-tree":             "0.0.6"
+                        "b-tree":             "0.0.10"
     },
     "devDependencies":
     {
-                        "proof":  "0.0.36",
-                        "tap":    "*"
+                        "proof":              "0.0.36",
+                        "tap":                "*"
     },
     "scripts":
     {
