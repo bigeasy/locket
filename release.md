@@ -7,4 +7,5 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Change `_lastTransactionId` to `_version`. #68.
  * Re-implement open using extracted libraries. #67.

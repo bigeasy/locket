@@ -332,7 +332,7 @@ Locket.prototype._open = cadence(function (step, options) {
         this._operations = 0
         this._mergeRequests = 0
         this._successfulTransactions = {}
-        this._nextTransactionId = 1
+        this._version = 0
         this._transactions.iterator(this._transactions.left, step())
     }, function (transactions) {
         step(function (more) {
@@ -347,7 +347,7 @@ Locket.prototype._open = cadence(function (step, options) {
                 transactions.get(i + offset, step())
             }, function (version) {
                 this._successfulTransactions[version] = true
-                this._nextTransactionId = Math.max(this._nextTransactionId, version + 1)
+                this._version = Math.max(this._version, version)
             })(length - offset)
         }, function () {
             transactions.next(step())
@@ -534,7 +534,7 @@ Locket.prototype._merge = cadence(function (step) {
 })
 
 Locket.prototype._batch = cadence(function (step, array, options) {
-    var transaction = { id: this._nextTransactionId++ }
+    var transaction = { version: ++this._version }
     var tree = this._stages[0].tree
     step(function () {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
