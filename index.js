@@ -14,6 +14,12 @@ var path = require('path')
 var cadence = require('cadence')
 var mkdirp  = require('mkdirp')
 
+var pair = require('pair')
+
+var mvcc = {
+    revise: require('revise')
+}
+
 function serialize (object, key) {
     if (key) {
         var header = [ object.type, object.version || 0 ].join(' ') + ' '
@@ -254,31 +260,13 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
-function extract (record) {
-    // todo: can't I just return the record? Mebby, or mebby it confuzes things
-    // in the v8 compiler, different object types.
-    return { key: record.key, version: record.version || 0 }
-}
-
-function bytewise (left, right) {
-    for (var i = 0, I = Math.min(left.length, right.length); i < I; i++) {
-        if (left[i] - right[i]) return left[i] - right[i]
-    }
-    return left.length - right.length
-}
-
-function compare (left, right) {
-    var compare = bytewise(left.key, right.key)
-    return compare ? compare : left.version - right.version
-}
-
 function createStageStrata (name) {
     return new Strata({
         directory: path.join(this.location, 'stages', name),
-        extractor: extract,
-        comparator: compare,
-        serialize: serialize,
-        deserialize: deserialize,
+        extractor: mvcc.revise.extractor(pair.extract),
+        comparator: mvcc.revise.comparator(pair.compare),
+        serialize: pair.serializer,
+        deserialize: pair.deserializer,
         leafSize: 1024,
         branchSize: 1024
     })
@@ -332,10 +320,10 @@ Locket.prototype._open = cadence(function (step, options) {
     }, function () {
         this._primary = new Strata({
             directory: path.join(this.location, 'primary'),
-            extractor: extract,
-            comparator: compare,
-            serialize: serialize,
-            deserialize: deserialize,
+            extractor: mvcc.revise.extractor(pair.extract),
+            comparator: mvcc.revise.comparator(pair.compare),
+            serialize: pair.serializer,
+            deserialize: pair.deserializer,
             leafSize: 1024,
             branchSize: 1024
         })

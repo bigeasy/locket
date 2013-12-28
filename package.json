@@ -30,7 +30,9 @@
                         "rimraf":             "~2.2",
                         "timezone":           "0.0.22",
                         "mkdirp":             "~0.3",
-                        "b-tree":             "0.0.10"
+                        "b-tree":             "0.0.10",
+                        "revise":             "0.0.1",
+                        "pair":               "0.0.1"
     },
     "devDependencies":
     {
