@@ -20,39 +20,6 @@ var mvcc = {
     revise: require('revise')
 }
 
-function serialize (object, key) {
-    if (key) {
-        var header = [ object.type, object.version || 0 ].join(' ') + ' '
-        var buffer = new Buffer(Buffer.byteLength(header) + object.key.length)
-        buffer.write(header)
-        new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
-    } else {
-        var value = object.type == 'del' ? '' : object.value
-        var header = [ object.type, object.version || 0, object.key.length ].join(' ') + ' '
-        var buffer = new Buffer(Buffer.byteLength(header) + object.key.length + value.length)
-        buffer.write(header)
-        new Buffer(object.key).copy(buffer, Buffer.byteLength(header))
-        new Buffer(value).copy(buffer, Buffer.byteLength(header) + object.key.length)
-    }
-    return buffer
-}
-
-function deserialize (buffer, key)  {
-    for (var i = 0, count = key ? 2 : 3; buffer[i] != 0x20 || --count; i++);
-    var header = buffer.toString('utf8', 0, i).split(' ')
-    var length = +(header[2])
-    var key = new Buffer(length)
-    buffer.copy(key, 0, i + 1, i  + 1 + length)
-    var value = new Buffer(buffer.length - (i + 1 + length))
-    buffer.copy(value, 0, i + 1 + length)
-    return {
-        type: header[0],
-        version: +(header[1]),
-        key: key,
-        value: value
-    }
-}
-
 function isTrue (options, property, defaultValue) {
     return !!((property in options) ? options[property] : defaultValue)
 }
