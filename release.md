@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Re-implement delete using abstracted libraries. #73.
  * Re-implement get using extracted libraries. #72.
  * Re-implement put using extracted libraries. #71.
  * Re-implement create using extracted libraries. #69.
