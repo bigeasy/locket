@@ -17,7 +17,12 @@ var mkdirp  = require('mkdirp')
 var pair = require('pair')
 
 var mvcc = {
-    revise: require('revise')
+    revise: require('revise'),
+    riffle: require('riffle'),
+    advance: require('advance'),
+    skip: require('skip'),
+    designate: require('designate'),
+    amalgamate: require('amalgamate')
 }
 
 function isTrue (options, property, defaultValue) {
@@ -25,200 +30,54 @@ function isTrue (options, property, defaultValue) {
 }
 
 function Iterator (db, options) {
+    var versions = {}
+
+    for (var key in db._versions) {
+        versions[key] = true
+    }
+
     this._db = db
     this._start = options.start
     this._limit = options.limit
-    this._direction = isTrue(options, 'reverse', false) ? '_reverse' : '_forward'
+    this._versions = versions
+    this._direction = isTrue(options, 'reverse', false) ? 'reverse' : 'forward'
     this._keyAsBuffer = isTrue(options, 'keyAsBuffer', true)
     this._valueAsBuffer = isTrue(options, 'valueAsBuffer', true)
 }
 util.inherits(Iterator, AbstractIterator)
 
-Iterator.prototype._forward = cadence(function (step, name) {
-    var cursor = this._cursors[name].cursor
-    var index = this._cursors[name].index
-    delete this._cursors[name].record
-    if (cursor) step(function () {
-        if (index < cursor.length) return true
-        else step(function () {
-            cursor.next(step())
-        }, function (more) {
-            index = cursor.index
-            return more
-        })
-    }, function (more) {
-        if (more) {step(function () {
-            cursor.get(index, step())
-        }, function (record) {
-        // todo: check that id is in successful transaction.
-            step(function () {
-                if (++index < cursor.length) return true
-                else step(function () {
-                    cursor.next(step())
-                }, function (more) {
-                    if (more)  {
-                        index = cursor.index
-                    } else {
-                        delete this._cursors[name].cursor
-                        cursor.unlock()
-                    }
-                    return more
-                })
-            }, function (more) {
-                if (more) cursor.get(index, step())
-                else step(null, record)
-            }, function (next) {
-                if (bytewise(next.key, record.key) == 0) record = next
-                else step(null, record)
-            })()
-        })} else {
-            delete this._cursors[name].cursor
-            cursor.unlock()
-            return null
-        }
-    }, function (record) {
-        this._cursors[name].index = index
-        if (record) {
-            record.version = record.version || 0
-            this._cursors[name].record = record
-        } else {
-            delete this._cursors[name].record
-        }
-        return record
-    })
-})
-
-Iterator.prototype._seekBackward = cadence(function (step, name, test) {
-    var iterator = this._cursors[name]
-    step(function () {
-        if (iterator.index < 0) {
-            if (iterator.cursor.address == 1) step(null)
-            else throw new Error
-        }
-    }, function () {
-        iterator.cursor.get(iterator.index, step())
-    }, function (record) {
-        if (test.call(this, record)) {
-            step(null, record)
-        } else {
-            iterator.index--
-        }
-    })()
-})
-
-Iterator.prototype._reverse = cadence(function (step, name) {
-    var iterator = this._cursors[name]
-    delete iterator.record
-    if (iterator.cursor) step(function () {
-        this._seekBackward(name, function (record) {
-            return this._db._successfulTransactions[record.version]
-        }, step())
-    }, function (record) {
-        if (record) {
-            step (function () {
-                this._seekBackward(name, function (skip) {
-                    return bytewise(skip.key, record.key) != 0
-                }, step())
-            }, function () {
-                return record
-            })
-        }
-    }, function (record) {
-        if (record) {
-            record.version = record.version || 0
-            iterator.record = record
-        } else {
-            iterator.cursor.unlock()
-            delete iterator.cursor
-        }
-        return record
-    })
-})
-
 Iterator.prototype._next = cadence(function (step) {
-    var db = this._db
     step(function () {
-        if (!this._cursors) step(function () {
-            this._cursors = {}
-            step(function (stage) {
-                step(function () {
-                    if (this._direction == '_forward') {
-                        if (this._start) {
-                            stage.tree.iterator({
-                                key: new Buffer(this._start),
-                                version: 0
-                            }, step())
-                        } else {
-                            stage.tree.iterator(stage.tree.left, step())
-                        }
-                    } else {
-                        if (this._start) {
-                            throw new Error
-                        } else {
-                            stage.tree.iterator(stage.tree.right, step())
-                        }
-                    }
-                }, function (cursor) {
-                    var index = cursor.index < 0 ? ~ cursor.index : cursor.index
-                    if (this._direction == '_reverse' && ! this._start) {
-                        index = cursor.length - 1
-                    }
-                    this._cursors[stage.name] = {
-                        name: stage.name,
-                        cursor: cursor,
-                        index: index
-                    }
-                    this[this._direction](stage.name, step())
-                })
-            })([ { name: 'primary', tree: this._db._primary } ].concat(this._db._stages))
-        })
-    }, function () {
-        var active = Object.keys(this._cursors).filter(function (name) {
-            return ('record' in this._cursors[name])
-        }.bind(this))
-
-        if (active.length) {
-            var candidates = active.map(function (name) {
-                return this._cursors[name]
-            }.bind(this))
-
-            var key = candidates.reduce(function (previous, current) {
-                return bitewise(previous.record.key,  current.record.key) < 0 ? previous : current
-            }).record.key
-
-            candidates = candidates.filter(function (candidate) {
-                return bytewise(key, candidate.record.key) == 0
-            })
-
-            // todo: error if the above reduces to zero. this is to remind us to
-            // test this case in code coverage.
-            if (candidates.length == 0) {
-                console.log(candidates.length)
-            }
-
-            var winner = candidates.reduce(function (previous, current) {
-                return previous.record.version > current.record.version
-                     ? previous : current
-            }).record
-
+        if (this._iterator) return this._iterator
+        step(function () {
+            var iterators = []
             step(function () {
-                candidates.forEach(step([], function (candidate) {
-                    this[this._direction](candidate.name, step())
-                }));
+                step(function (stage) {
+                    mvcc.skip[this._direction](
+                        stage.tree, pair.compare, this._versions, {}, this._start, step()
+                    )
+                }, function (iterator) {
+                    iterators.push(iterator)
+                })([ { tree: this._db._primary } ].concat(this._db._stages))
             }, function () {
-                if (winner.type == 'del') {
-                    this._next(step())
-                } else {
-                    step()(null, this._keyAsBuffer ? winner.key : winner.key.toString(),
-                                 this._valueAsBuffer ? winner.value : winner.value.toString())
-                }
+                return iterators
             })
-        } else {
-            step(null)
-        }
+        }, function (iterators) {
+            mvcc.designate.forward(pair.compare, function (record) {
+                return record.operation == 'del'
+            }, iterators, step('_iterator'))
+        })
+    }, function (iterator) {
+        iterator.next(step())
+    }, function (record) {
+        if (record) step(null, record.key, record.value)
     })
 })
 
+Iterator.prototype._end = function (callback) {
+    this._iterator.unlock()
+    callback()
+}
 
 function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
@@ -227,10 +86,11 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
+var extractor =  mvcc.revise.extractor(pair.extract)
 function createStageStrata (name) {
     return new Strata({
         directory: path.join(this.location, 'stages', name),
-        extractor: mvcc.revise.extractor(pair.extract),
+        extractor: extractor,
         comparator: mvcc.revise.comparator(pair.compare),
         serialize: pair.serializer,
         deserialize: pair.deserializer,
@@ -258,6 +118,7 @@ var createStage = cadence(function (step, name) {
 
 Locket.prototype._open = cadence(function (step, options) {
     var exists = true
+    this._options = options
     step(function () {
         var readdir = step([function () {
             fs.readdir(this.location, step())
@@ -331,44 +192,39 @@ Locket.prototype._open = cadence(function (step, options) {
         this._isOpened = true
         this._operations = 0
         this._mergeRequests = 0
-        this._successfulTransactions = {}
-        this._version = 0
-        this._transactions.iterator(this._transactions.left, step())
+        this._versions = { 0: true }
+        this._version = 1
+        mvcc.riffle.forward(this._transactions, step())
     }, function (transactions) {
-        step(function (more) {
-            if (!more) {
-                transactions.unlock()
-                step(null)
-            }
-        }, function () {
-            var offset = transactions.offset
-            var length = transactions.length
-            step(function (i) {
-                transactions.get(i + offset, step())
+        step([function () {
+            transactions.unlock()
+        }], function () {
+            step(function () {
+                transactions.next(step(false))
             }, function (version) {
-                this._successfulTransactions[version] = true
+                this._versions[version] = true
                 this._version = Math.max(this._version, version)
-            })(length - offset)
-        }, function () {
-            transactions.next(step())
-        })(null, true)
+            })()
+        })
     })
 })
 
 Locket.prototype._get = cadence(function (step, key, options) {
-    // todo: use iterator valueAsBuffer.
-    var iterator = new Iterator(this, { start: key, limit: 1, options: options })
+    if (!Buffer.isBuffer(key)) {
+        key = pair.encoder.key([ options || {}, this._options ]).encode(key)
+    }
+    var iterator = this._iterator({ start: key, limit: 1 })
     step(function () {
         iterator.next(step())
     }, function ($key, value) {
         step(function () {
             iterator.end(step())
         }, function () {
-            if ($key && value) {
-                value = ('asBuffer' in options) && !options.asBuffer ? value.toString() : value
-                if (bytewise($key, new Buffer(key)) == 0) return step()(null, value)
+            if ($key && value && pair.compare($key, key) == 0) {
+                step(null, value)
+            } else {
+                step(new Error('NotFoundError: not found'))
             }
-            step()(new Error('NotFoundError: not found'))
         })
     })
 })
@@ -456,10 +312,10 @@ Merge.prototype.merge = cadence(function (step) {
                     step(function () {
                         stage.get(index, step())
                     }, function (record) {
-                        if (this._db._successfulTransactions[record.version]) {
+                        if (this._db._versions[record.version]) {
                             if (candidate.version && candidate.key != record.key) {
                                 // what? nooooo. what? whatcha doin' there champ?
-                                //delete this._db._successfulTransactions[candidate.transactionId]
+                                //delete this._db._versions[candidate.transactionId]
                                 this.update(candidate, step())
                             }
                             candidate = record
@@ -534,65 +390,28 @@ Locket.prototype._merge = cadence(function (step) {
 })
 
 Locket.prototype._batch = cadence(function (step, array, options) {
-    var transaction = { version: ++this._version }
+    var version = ++this._version
     var tree = this._stages[0].tree
     step(function () {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
     }, function () {
-        step(function (operation) {
-            var record = {
-                type: operation.type,
-                version: transaction.id,
-                key: new Buffer(operation.key)
-            }
-            if (operation.type != 'del') {
-                record.value = new Buffer(operation.value.toString())
-            }
-            step(function () {
-                if (transaction.cursor) {
-                    return transaction.cursor
-                } else {
-                    tree.mutator(record, step())
-                }
-            }, function (cursor) {
-                step(function () {
-                    if (transaction.cursor) {
-                        cursor.indexOf(record, step())
-                    } else {
-                        transaction.cursor = cursor
-                        return cursor.index
-                    }
-                }, function (index) {
-                    if (index < 0) return index
-                    else step(function () {
-                        cursor.remove(index, step())
-                    }, function () {
-                        return ~ index
-                    })
-                }, function (index) {
-                    step(function () {
-                        cursor.insert(record, record, ~ index, step())
-                    }, function (insert) {
-                        if (insert != 0) {
-                            delete transaction.cursor
-                            cursor.unlock()
-                            operations.put(call, this, transaction, options, operation)
-                        } else {
-                            this._operations++
-                        }
-                    })
-                })
-            })
-        })(array)
+        var properties = [ options, this._options ]
+        var batch = mvcc.advance.forward(array, function (entry, callback) {
+            var record = pair.record(entry.key, entry.value, entry.type, version, properties)
+            var key = extractor(record)
+            callback(null, record, key)
+        })
+        mvcc.amalgamate.amalgamate(function () {
+            return false
+        }, version, tree, batch, step())
     }, function () {
-        if (transaction.cursor) transaction.cursor.unlock()
         step(function () {
-            this._transactions.mutator(transaction.id, step())
+            this._transactions.mutator(version, step())
         }, function (cursor) {
             step(function () {
-                cursor.insert(transaction.id, transaction.id, ~ cursor.index, step())
+                cursor.insert(version, version, ~ cursor.index, step())
             }, function () {
-                this._successfulTransactions[transaction.id] = true
+                this._versions[version] = true
                 cursor.unlock()
             })
         })
@@ -601,7 +420,11 @@ Locket.prototype._batch = cadence(function (step, array, options) {
 
 Locket.prototype._close = cadence(function (step, operations) {
     if (this._isOpened) step(function () {
-        this._primary.close(step())
+        step(function (tree) {
+            tree.close(step())
+        })([ this._primary, this._transactions ].concat(this._stages.map(function (stage) {
+            return stage.tree
+        })))
     }, function () {
         this._isOpened = false
     })

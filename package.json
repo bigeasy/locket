@@ -24,7 +24,7 @@
     },
     "dependencies":
     {
-                        "cadence":            "0.0.26",
+                        "cadence":            "0.0.27",
                         "abstract-leveldown": "~0.11",
                         "sequester":          "0.0.1",
                         "rimraf":             "~2.2",
@@ -32,7 +32,12 @@
                         "mkdirp":             "~0.3",
                         "b-tree":             "0.0.10",
                         "revise":             "0.0.1",
-                        "pair":               "0.0.1"
+                        "pair":               "0.0.2",
+                        "riffle":             "0.0.3",
+                        "amalgamate":         "0.0.3",
+                        "advance":            "0.0.2",
+                        "designate":          "0.0.1",
+                        "skip":               "0.0.3"
     },
     "devDependencies":
     {
