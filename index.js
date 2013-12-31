@@ -16,6 +16,8 @@ var mkdirp  = require('mkdirp')
 
 var pair = require('pair')
 
+function echo (object) { return object }
+
 var mvcc = {
     revise: require('revise'),
     riffle: require('riffle'),
@@ -30,7 +32,7 @@ function isTrue (options, property, defaultValue) {
 }
 
 function Iterator (db, options) {
-    var versions = {}
+    var versions = {}, preferences = [ options, db._options ]
 
     for (var key in db._versions) {
         versions[key] = true
@@ -41,8 +43,10 @@ function Iterator (db, options) {
     this._limit = options.limit
     this._versions = versions
     this._direction = isTrue(options, 'reverse', false) ? 'reverse' : 'forward'
-    this._keyAsBuffer = isTrue(options, 'keyAsBuffer', true)
-    this._valueAsBuffer = isTrue(options, 'valueAsBuffer', true)
+    this._decoders = {
+        key: isTrue(options, 'keyAsBuffer', true) ? echo : pair.encoder.key(preferences).decode,
+        value: isTrue(options, 'valueAsBuffer', true) ? echo : pair.encoder.value(preferences).decode
+    }
 }
 util.inherits(Iterator, AbstractIterator)
 
@@ -70,7 +74,9 @@ Iterator.prototype._next = cadence(function (step) {
     }, function (iterator) {
         iterator.next(step())
     }, function (record) {
-        if (record) step(null, record.key, record.value)
+        if (record) {
+            step(null, this._decoders.key(record.key), this._decoders.value(record.value))
+        }
     })
 })
 

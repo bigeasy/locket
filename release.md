@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Re-implement iterator using abstracted libraries. #75.
  * Re-implement batch using abstracted libraries. #74.
  * Re-implement delete using abstracted libraries. #73.
  * Re-implement get using extracted libraries. #72.
