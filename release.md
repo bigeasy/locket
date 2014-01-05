@@ -17,6 +17,7 @@ to build other databases.
  * Re-implement create using extracted libraries. #69.
  * Change `_lastTransactionId` to `_version`. #68.
  * Re-implement open using extracted libraries. #67.
+ * Implement AbstractLevelDOWN del tests. #54.
  * Implement AbstractLevelDOWN put tests. #51.
  * Implement AbstractLevelDOWN get tests. #49.
  * Pass all AbstractLevelDOWN open tests. #34.
