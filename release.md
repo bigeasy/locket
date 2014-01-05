@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Implement AbstractLevelDOWN constructor tests. #77.
  * Re-implement merge using abstracted libraries. #76.
  * Re-implement iterator using abstracted libraries. #75.
  * Re-implement batch using abstracted libraries. #74.
