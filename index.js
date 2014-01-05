@@ -229,6 +229,9 @@ Locket.prototype._get = cadence(function (step, key, options) {
             iterator.end(step())
         }, function () {
             if ($key && value && pair.compare($key, key) == 0) {
+                if (!isTrue(options, 'asBuffer', true)) {
+                    value = pair.encoder.value([ options, this._options ]).decode(value)
+                }
                 step(null, value)
             } else {
                 step(new Error('NotFoundError: not found'))
