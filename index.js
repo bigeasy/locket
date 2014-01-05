@@ -23,6 +23,7 @@ var mvcc = {
     riffle: require('riffle'),
     advance: require('advance'),
     skip: require('skip'),
+    splice: require('splice'),
     designate: require('designate'),
     amalgamate: require('amalgamate')
 }
@@ -89,6 +90,7 @@ function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
     AbstractLevelDOWN.call(this, location)
     this._sequester = new Sequester
+    this._merging = new Sequester
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
@@ -217,7 +219,7 @@ Locket.prototype._open = cadence(function (step, options) {
 
 Locket.prototype._get = cadence(function (step, key, options) {
     if (!Buffer.isBuffer(key)) {
-        key = pair.encoder.key([ options || {}, this._options ]).encode(key)
+        key = pair.encoder.key([ options, this._options ]).encode(key)
     }
     var iterator = this._iterator({ start: key, limit: 1 })
     step(function () {
@@ -247,157 +249,89 @@ Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
-function Merge (db) {
-    this._db = db
-    this._greatest = 0
+Locket.prototype._stageTrees = function (index) {
+    return this._stages.slice(index).map(function (stage) { return stage.tree })
 }
 
-Merge.prototype.update = cadence(function (step, record) {
-    var key = { key: record.key, version: 0 }
-    this._greatest = Math.max(record.version, this._greatest)
-    var insert = step(function () {
-        if (!this._primary) {this._db._primary.mutator(key, step(step, function ($) {
-            this._primary = $
-            return this._primary.index
-        }))} else {
-            this._primary.indexOf(key, step())
-        }
-    }, function (index) {
-        if (index < 0) return ~ index
-        else step(function () {
-            throw new Error // we don't wanna go ehre.
-            this._primary.remove(index, step())
-        }, function () {
-            return index
-        })
-    }, function (index) {
-        if (record.type == 'put') step(function () {
-            // todo: probably re-extract?
-            this._primary.insert({
-                version: 0, // todo: different object type?
-                key: record.key,
-                value: record.value
-            }, key, index, step())
-        }, function (result) {
-            if (result != 0) {
-                ok(result > 0, 'went backwards')
-                this._primary.unlock()
-                delete this._primary
-                step(insert)
-            }
-        })
-    })(1)
-})
-
-Merge.prototype.merge = cadence(function (step) {
-    // todo: track both greatest and least transaction id.
-    var candidate = { version: 0 }
-    var shared = 0
-    var unmerged
-    step([function () { // gah! cleanup! couldn't see it. ack! ack! ack!
-        if (this._primary) this._primary.unlock()
-        if (shared) this._db._sequester.unlock()
-    }], function () {
-        this._db._sequester.exclude(step())
-    }, function () {
-        unmerged = this._db._stages[this._db._stages.length - 1]
-        this._db._sequester.share(step())
-        this._db._sequester.unlock()
-    }, function () {
-        shared++
-        unmerged.tree.iterator(unmerged.tree.left, step())
-    }, function (stage) {
-        step(function (more) {
-            if (!more) {
-                stage.unlock()
-                // do you need to unlock when you hit the end?
-                step(null)
-            } else {
-                step(function (index) {
-                    index += stage.offset
-                    step(function () {
-                        stage.get(index, step())
-                    }, function (record) {
-                        if (this._db._versions[record.version]) {
-                            if (candidate.version && candidate.key != record.key) {
-                                // what? nooooo. what? whatcha doin' there champ?
-                                //delete this._db._versions[candidate.transactionId]
-                                this.update(candidate, step())
-                            }
-                            candidate = record
-                        }
-                    })
-                })(stage.length - stage.offset)
-            }
-        }, function () {
-            stage.next(step())
-        })(null, true)
-    }, function () {
-        if (candidate.version) {
-            this.update(candidate, step())
-        }
-    }, function () {
-        if (this._primary) this._primary.unlock()
-        delete this._primary
-    }, function () {
-        this._db._sequester.exclude(step())
-        shared--
-        this._db._sequester.unlock()
-    }, function () {
-        this._db._stages.pop()
-        this._db._sequester.share(step())
-        this._db._sequester.unlock()
-    }, function () {
-        // todo: purge transactions
-        shared++
-        var from = path.join(this._db.location, 'stages', unmerged.name)
-        var filename = tz(Date.now(), '%F-%H-%M-%S-%3N')
-        var to = path.join(this._db.location, 'archive', filename)
-        // todo: note that archive and stage need to be on same file system.
-        step(function () {
-            fs.rename(from, to, step())
-        }, function () {
-            // todo: rimraf the archive file if we're not preserving the archive
-        })
-    })
-})
-
 Locket.prototype._merge = cadence(function (step) {
-    if (this._mergeRequests++ == 0) {
+    var merged = {}
+    step(function () {
+        this._merging.exclude(step(step, [function () { this._merging.unlock() }]))
+    }, function () {
+        // add a new stage.
+        //
+        // we need to stop the world just long enough to unshift the new
+        // stage, it will happen in one tick, super quick.
         step(function () {
-            // first merge any extras down to one.
+            // todo: rename name to count.
+            // todo: need to put next "name" in memory and increment, this
+            // duplicates.
+            createStage.call(this, +(this._stages[0].name) + 1, step())
+        }, function (stage) {
             step(function () {
-                if (this._stages.length == 1) step(null)
-                else new Merge(this).merge(step())
-            })()
-        }, function () {
-            // add a new stage.
-            //
-            // we need to stop the world just long enough to unshift the new
-            // stage, it will happen in one tick, super quick.
-            step(function () {
-                createStage.call(this, +(this._stages[0].name) + 1, step())
-            }, function (stage) {
-                step(function () {
-                    this._sequester.exclude(step())
-                }, function () {
-                    this._stages.unshift(stage)
-                    this._sequester.unlock()
-                })
+                this._sequester.exclude(step())
+            }, function () {
+                this._stages.unshift(stage)
+                this._sequester.unlock()
             })
-        }, function () {
-            // once again, first merge any extras down to one.
-            step(function () {
-                if (this._stages.length == 1) step(null)
-                else new Merge(this).merge(step())
-            })()
         })
-    }
+    }, function () {
+        this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
+    }, function () {
+        // make serial
+        this._stageTrees(1).forEach(step([], function (tree) {
+            mvcc.skip.forward(tree, pair.compare, this._versions, merged, this._start, step())
+        }))
+    }, function (iterators) {
+        mvcc.designate.forward(pair.compare, function (record) {
+            return false
+        }, iterators, step())
+    }, function (iterator) {
+        step(function () {
+            // todo: amalgamate is going to set the version, which is wrong, it
+            // should assert the version, and the version should be correct.
+            mvcc.amalgamate(function (record) {
+                return record.operation == 'del'
+            }, 0, this._primary, iterator, step())
+        }, function () {
+            iterator.unlock()
+        })
+    }, function () {
+        // no need to lock exclusive, anyone using these trees at the end
+        // gets the same result as not using them.
+        var iterator = mvcc.advance.forward(Object.keys(merged).sort(), function (element, callback) {
+            callback(null, element, element)
+        })
+        // todo: maybe passing a string makes a function for you.
+        // todo: any case where a transaction is in an inbetween state? A state
+        // where it has been removed from the transactions tree, but it exists
+        // in the other trees? Or worse, an earlier version remains in the
+        // transaction tree, so that when we replay it causes an earlier version
+        // to win? Yes, we're writing in order. How much do we trust a Strata
+        // write? Quite a bit I think. I'm imagining that we need to trust a
+        // write to some degree, that it will only be a half bitten append,
+        // therefore, we would have written out deletes in order, which means
+        // that only the latest versions are in the tree. Would you rather I
+        // write out version numbers as file names in a directory? Atomic
+        // according to everything else you believe.
+        mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
+    }, function () {
+        this._stages.splice(1).forEach(step([], function (stage) {
+            var from = path.join(this.location, 'stages', stage.name)
+            var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage)
+            var to = path.join(this.location, 'archive', filename)
+            // todo: note that archive and stage need to be on same file system.
+            step(function () {
+                fs.rename(from, to, step())
+            }, function () {
+                // todo: rimraf the archive file if we're not preserving the archive
+            })
+        }))
+    })
 })
 
 Locket.prototype._batch = cadence(function (step, array, options) {
     var version = ++this._version
-    var tree = this._stages[0].tree
     step(function () {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
     }, function () {
@@ -407,9 +341,9 @@ Locket.prototype._batch = cadence(function (step, array, options) {
             var key = extractor(record)
             callback(null, record, key)
         })
-        mvcc.amalgamate.amalgamate(function () {
+        mvcc.amalgamate(function () {
             return false
-        }, version, tree, batch, step())
+        }, version, this._stages[0].tree, batch, step())
     }, function () {
         step(function () {
             this._transactions.mutator(version, step())

@@ -34,10 +34,12 @@
                         "revise":             "0.0.1",
                         "pair":               "0.0.2",
                         "riffle":             "0.0.3",
-                        "amalgamate":         "0.0.3",
+                        "amalgamate":         "0.0.5",
                         "advance":            "0.0.2",
-                        "designate":          "0.0.1",
-                        "skip":               "0.0.3"
+                        "splice":             "0.0.2",
+                        "twiddle":            "0.0.1",
+                        "designate":          "0.0.2",
+                        "skip":               "0.0.4"
     },
     "devDependencies":
     {
