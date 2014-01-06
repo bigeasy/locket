@@ -15,6 +15,7 @@ var cadence = require('cadence')
 var mkdirp  = require('mkdirp')
 
 var pair = require('pair')
+var correlate = require('correlate')
 
 function echo (object) { return object }
 
@@ -40,7 +41,9 @@ function Iterator (db, options) {
     }
 
     this._db = db
-    this._start = options.start
+    this._range = correlate(pair.compare, function (key) {
+        return Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
+    }, options)
     this._limit = options.limit
     this._versions = versions
     this._direction = isTrue(options, 'reverse', false) ? 'reverse' : 'forward'
@@ -59,7 +62,7 @@ Iterator.prototype._next = cadence(function (step) {
             step(function () {
                 step(function (stage) {
                     mvcc.skip[this._direction](
-                        stage.tree, pair.compare, this._versions, {}, this._start, step()
+                        stage.tree, pair.compare, this._versions, {}, this._range.key, step()
                     )
                 }, function (iterator) {
                     iterators.push(iterator)

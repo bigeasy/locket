@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Use Correlate to interpret iterator range properties. #79.
  * Implement AbstractLevelDOWN constructor tests. #77.
  * Re-implement merge using abstracted libraries. #76.
  * Re-implement iterator using abstracted libraries. #75.
