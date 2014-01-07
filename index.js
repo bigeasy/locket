@@ -44,9 +44,7 @@ function Iterator (db, options) {
     this._range = correlate(pair.compare, function (key) {
         return Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
     }, options)
-    this._limit = options.limit
     this._versions = versions
-    this._direction = isTrue(options, 'reverse', false) ? 'reverse' : 'forward'
     this._decoders = {
         key: isTrue(options, 'keyAsBuffer', true) ? echo : pair.encoder.key(preferences).decode,
         value: isTrue(options, 'valueAsBuffer', true) ? echo : pair.encoder.value(preferences).decode
@@ -61,7 +59,7 @@ Iterator.prototype._next = cadence(function (step) {
             var iterators = []
             step(function () {
                 step(function (stage) {
-                    mvcc.skip[this._direction](
+                    mvcc.skip[this._range.direction](
                         stage.tree, pair.compare, this._versions, {}, this._range.key, step()
                     )
                 }, function (iterator) {
