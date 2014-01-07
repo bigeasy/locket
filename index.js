@@ -77,7 +77,14 @@ Iterator.prototype._next = cadence(function (step) {
         iterator.next(step())
     }, function (record) {
         if (record) {
-            step(null, this._decoders.key(record.key), this._decoders.value(record.value))
+            switch (this._range.valid(record.key) && 0) {
+            case -1:
+                this._next(step())
+                break
+            case 0:
+                step(null, this._decoders.key(record.key), this._decoders.value(record.value))
+                break
+            }
         }
     })
 })
