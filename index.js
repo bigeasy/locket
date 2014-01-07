@@ -77,7 +77,7 @@ Iterator.prototype._next = cadence(function (step) {
         iterator.next(step())
     }, function (record) {
         if (record) {
-            switch (this._range.valid(record.key) && 0) {
+            switch (this._range.valid(record.key)) {
             case -1:
                 this._next(step())
                 break

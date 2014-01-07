@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Correlate to 0.0.3. #82.
  * Use Correlate `valid` function. #81.
  * Upgrade Correlate to 0.0.2. #80.
  * Use Correlate to interpret iterator range properties. #79.
