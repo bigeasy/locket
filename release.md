@@ -9,6 +9,7 @@ to build other databases.
 
  * Upgrade Riffle to 0.0.5. #85.
  * Upgrade Skip to 0.0.5. #84.
+ * Upgrade Correlate to 0.0.4. #83.
  * Upgrade Correlate to 0.0.3. #82.
  * Use Correlate `valid` function. #81.
  * Upgrade Correlate to 0.0.2. #80.
