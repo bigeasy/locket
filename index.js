@@ -310,7 +310,7 @@ Locket.prototype._merge = cadence(function (step) {
     }, function () {
         // no need to lock exclusive, anyone using these trees at the end
         // gets the same result as not using them.
-        var iterator = mvcc.advance.forward(Object.keys(merged).sort(), function (element, callback) {
+        var iterator = mvcc.advance(Object.keys(merged).sort(), function (element, callback) {
             callback(null, element, element)
         })
         // todo: maybe passing a string makes a function for you.
@@ -347,7 +347,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
     }, function () {
         var properties = [ options, this._options ]
-        var batch = mvcc.advance.forward(array, function (entry, callback) {
+        var batch = mvcc.advance(array, function (entry, callback) {
             var record = pair.record(entry.key, entry.value, entry.type, version, properties)
             var key = extractor(record)
             callback(null, record, key)
