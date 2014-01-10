@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Build only on Node.js 0.10 at Travis CI. #90.
  * Upgrade Strata to 0.0.11. #88.
  * Ugprade Correlate to 0.0.5. #87.
  * Upgrade Advance to 0.0.3. #86.
