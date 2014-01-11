@@ -29,6 +29,7 @@ to build other databases.
  * Change `_lastTransactionId` to `_version`. #68.
  * Re-implement open using extracted libraries. #67.
  * Implement AbstractLevelDOWN batch tests. #57.
+ * Implement AbstractLevelDOWN chained batch tests. #56.
  * Implement AbstractLevelDOWN close tests. #55.
  * Implement AbstractLevelDOWN del tests. #54.
  * Implement AbstractLevelDOWN iterator tests. #53.
