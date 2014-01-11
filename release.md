@@ -33,6 +33,7 @@ to build other databases.
  * Implement AbstractLevelDOWN close tests. #55.
  * Implement AbstractLevelDOWN del tests. #54.
  * Implement AbstractLevelDOWN iterator tests. #53.
+ * Implement the AbstractLevelDOWN put/get/del tests. #52.
  * Implement AbstractLevelDOWN put tests. #51.
  * Implement AbstractLevelDOWN ranges tests. #50.
  * Implement AbstractLevelDOWN get tests. #49.

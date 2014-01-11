@@ -7,5 +7,5 @@ module.exports = function (suite, tests) {
 
     var path = 'abstract-leveldown/abstract/' + suite + '-test'
 
-    require(path)[tests](factory, test, testCommon)
+    require(path)[tests](factory, test, testCommon, new Buffer('a'))
 }
