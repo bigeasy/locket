@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Add LGPL 3.0. #91.
  * Build only on Node.js 0.10 at Travis CI. #90.
  * Upgrade Strata to 0.0.11. #88.
  * Ugprade Correlate to 0.0.5. #87.
