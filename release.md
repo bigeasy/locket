@@ -7,6 +7,8 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Strata to 0.0.12. #93.
+ * Upgrade Advance to 0.0.4. #92.
  * Add LGPL 3.0. #91.
  * Build only on Node.js 0.10 at Travis CI. #90.
  * Upgrade Strata to 0.0.11. #88.
