@@ -14,8 +14,8 @@
     "bugs":             "https://github.com/bigeasy/locket/issues",
     "licenses":
     [{
-                        "type": "LGPL-3.0",
-                        "url": "http://github.com/bigeasy/locket/raw/master/COPYING.LESSER"
+                        "type": "MIT",
+                        "url": "http://github.com/bigeasy/locket/raw/master/LICENSE"
     }],
     "repository":
     {
