@@ -26,7 +26,7 @@
     {
                         "cadence":            "0.0.27",
                         "abstract-leveldown": "~0.11",
-                        "sequester":          "0.0.1",
+                        "sequester":          "0.0.8",
                         "rimraf":             "~2.2",
                         "timezone":           "0.0.22",
                         "mkdirp":             "~0.3",

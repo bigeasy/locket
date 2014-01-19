@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Sequester to 0.0.8. #98.
  * Upgrade Strata to 0.0.16. #97.
  * Upgrade Proof to 0.0.41. #96.
  * Upgrade Advance to 0.0.5. #95.
