@@ -108,7 +108,7 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
-var extractor =  mvcc.revise.extractor(pair.extract)
+var extractor = mvcc.revise.extractor(pair.extract)
 function createStageStrata (name) {
     return new Strata({
         directory: path.join(this.location, 'stages', name),
