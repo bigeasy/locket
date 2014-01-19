@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Strata to 0.0.16. #97.
  * Upgrade Proof to 0.0.41. #96.
  * Upgrade Advance to 0.0.5. #95.
  * Revert to MIT. #94.
