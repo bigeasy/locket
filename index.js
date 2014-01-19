@@ -1,6 +1,6 @@
 module.exports = Locket
 
-var Sequester         = require('sequester')
+var sequester         = require('sequester')
 var Strata            = require('b-tree')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
@@ -103,8 +103,8 @@ Iterator.prototype._end = function (callback) {
 function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
     AbstractLevelDOWN.call(this, location)
-    this._sequester = new Sequester
-    this._merging = new Sequester
+    this._sequester = sequester.createLock()
+    this._merging = sequester.createLock()
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
