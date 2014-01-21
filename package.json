@@ -39,7 +39,7 @@
                         "advance":            "0.0.5",
                         "splice":             "0.0.2",
                         "twiddle":            "0.0.1",
-                        "designate":          "0.0.2",
+                        "designate":          "0.0.3",
                         "skip":               "0.0.5"
     },
     "devDependencies":
