@@ -69,7 +69,7 @@ Iterator.prototype._next = cadence(function (step) {
                 return iterators
             })
         }, function (iterators) {
-            mvcc.designate.forward(pair.compare, function (record) {
+            mvcc.designate[this._range.direction](pair.compare, function (record) {
                 return record.operation == 'del'
             }, iterators, step('_iterator'))
         })
