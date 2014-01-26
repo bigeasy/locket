@@ -15,7 +15,7 @@ var cadence = require('cadence')
 var mkdirp  = require('mkdirp')
 
 var pair = require('pair')
-var correlate = require('correlate')
+var constrain = require('constrain')
 
 function echo (object) { return object }
 
@@ -41,7 +41,7 @@ function Iterator (db, options) {
     }
 
     this._db = db
-    this._range = correlate(pair.compare, function (key) {
+    this._range = constrain(pair.compare, function (key) {
         return Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
     }, options)
     this._versions = versions

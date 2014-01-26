@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Constrain to 0.0.6. #101.
  * Select correct direction for designation iterator. #100.
  * Upgrade Designate to 0.0.3. #99.
  * Upgrade Sequester to 0.0.8. #98.
