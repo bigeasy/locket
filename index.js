@@ -26,7 +26,8 @@ var mvcc = {
     skip: require('skip'),
     splice: require('splice'),
     designate: require('designate'),
-    amalgamate: require('amalgamate')
+    amalgamate: require('amalgamate'),
+    dilute: require('dilute')
 }
 
 function isTrue (options, property, defaultValue) {
@@ -71,26 +72,19 @@ Iterator.prototype._next = cadence(function (step) {
         }, function (iterators) {
             mvcc.designate[this._range.direction](pair.compare, function (record) {
                 return record.operation == 'del'
-            }, iterators, step('_iterator'))
+            }, iterators, step())
+        }, function (iterator) {
+            var valid = this._range.valid
+            return this._iterator = mvcc.dilute(iterator, function (key) {
+                console.log(arguments)
+                return valid(key.value)
+            })
         })
     }, function (iterator) {
         iterator.next(step())
-    }, function (record) {
+    }, function (record, key) {
         if (record) {
-            step(function () {
-                setImmediate(step())
-            }, function () {
-                switch (this._range.valid(record.key)) {
-                case -1:
-                    this._next(step())
-                    break
-                case 0:
-                    step(null, this._decoders.key(record.key), this._decoders.value(record.value))
-                    break
-                case 1:
-                    break
-                }
-            })
+            step(null, this._decoders.key(record.key), this._decoders.value(record.value))
         }
     })
 })
