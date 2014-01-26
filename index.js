@@ -35,17 +35,12 @@ function isTrue (options, property, defaultValue) {
 }
 
 function Iterator (db, options) {
-    var versions = {}, preferences = [ options, db._options ]
-
-    for (var key in db._versions) {
-        versions[key] = true
-    }
-
+    var preferences = [ options, db._options ]
     this._db = db
     this._range = constrain(pair.compare, function (key) {
         return Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
     }, options)
-    this._versions = versions
+    this._versions = this._db._snapshot()
     this._decoders = {
         key: isTrue(options, 'keyAsBuffer', true) ? echo : pair.encoder.key(preferences).decode,
         value: isTrue(options, 'valueAsBuffer', true) ? echo : pair.encoder.value(preferences).decode
@@ -56,30 +51,7 @@ util.inherits(Iterator, AbstractIterator)
 Iterator.prototype._next = cadence(function (step) {
     step(function () {
         if (this._iterator) return this._iterator
-        step(function () {
-            var iterators = []
-            step(function () {
-                step(function (stage) {
-                    mvcc.skip[this._range.direction](
-                        stage.tree, pair.compare, this._versions, {}, this._range.key, step()
-                    )
-                }, function (iterator) {
-                    iterators.push(iterator)
-                })([ { tree: this._db._primary } ].concat(this._db._stages))
-            }, function () {
-                return iterators
-            })
-        }, function (iterators) {
-            mvcc.designate[this._range.direction](pair.compare, function (record) {
-                return record.operation == 'del'
-            }, iterators, step())
-        }, function (iterator) {
-            var valid = this._range.valid
-            return this._iterator = mvcc.dilute(iterator, function (key) {
-                console.log(arguments)
-                return valid(key.value)
-            })
-        })
+        this._db._dilution(this._range, this._versions, step('_iterator'))
     }, function (iterator) {
         iterator.next(step())
     }, function (record, key) {
@@ -101,6 +73,39 @@ function Locket (location) {
     this._merging = sequester.createLock()
 }
 util.inherits(Locket, AbstractLevelDOWN)
+
+Locket.prototype._snapshot = function () {
+    var versions = {}
+    for (var key in this._versions) {
+        versions[key] = true
+    }
+    return versions
+}
+
+Locket.prototype._dilution = cadence(function (step, range, versions) {
+    step(function () {
+        var iterators = []
+        step(function () {
+            step(function (stage) {
+                mvcc.skip[range.direction](
+                    stage.tree, pair.compare, versions, {}, range.key, step()
+                )
+            }, function (iterator) {
+                iterators.push(iterator)
+            })([ { tree: this._primary } ].concat(this._stages))
+        }, function () {
+            return iterators
+        })
+    }, function (iterators) {
+        mvcc.designate[range.direction](pair.compare, function (record) {
+            return record.operation == 'del'
+        }, iterators, step())
+    }, function (iterator) {
+        return mvcc.dilute(iterator, function (key) {
+            return range.valid(key.value)
+        })
+    })
+})
 
 var extractor = mvcc.revise.extractor(pair.extract)
 function createStageStrata (name) {

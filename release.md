@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Extract Dilute creation to Locket object. #102.
  * Upgrade Constrain to 0.0.6. #101.
  * Select correct direction for designation iterator. #100.
  * Upgrade Designate to 0.0.3. #99.
