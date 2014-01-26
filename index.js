@@ -374,6 +374,27 @@ Locket.prototype._batch = cadence(function (step, array, options) {
     })
 })
 
+Locket.prototype._approximateSize = cadence(function (step, from, to) {
+    step(function () {
+        var range = constrain(pair.compare, function (key) {
+            return Buffer.isBuffer(key) ? key : pair.encoder.key([]).encode(key)
+        }, { gte: from, lte: to })
+        this._dilution(range, this._snapshot(), step())
+    }, function (iterator) {
+        var approximateSize = 0
+        step([function () {
+            iterator.unlock()
+        }], function () {
+            step(function () {
+                iterator.next(step())
+            }, function (record, key, size) {
+                if (record) approximateSize += size
+                else step(null, approximateSize)
+            })()
+        })
+    })
+})
+
 Locket.prototype._close = cadence(function (step, operations) {
     if (this._isOpened) step(function () {
         step(function (tree) {

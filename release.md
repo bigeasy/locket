@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Implement `Locket.approximateSize`. #104.
  * Upgrade Skip to 0.0.6. #103.
  * Extract Dilute creation to Locket object. #102.
  * Upgrade Constrain to 0.0.6. #101.
