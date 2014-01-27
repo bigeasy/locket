@@ -8,6 +8,7 @@ require('proof')(2, function (step, equal, deepEqual) {
     var cadence = require('cadence')
 
     var Locket = require('../..')
+    var levelup = require('levelup')
 
     var tmp = path.join(__dirname, '../tmp')
 
@@ -17,7 +18,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         step(function () {
             rimraf(location, step())
         }, function () {
-            locket = require('levelup')(location, { db: Locket })
+            locket = levelup(location, { db: Locket })
             locket.open(step())
         }, [function () {
             locket.get('a', step())
@@ -30,7 +31,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         step(function () {
             rimraf(location, step())
         }, function () {
-            locket = require('levelup')(location, { db: Locket })
+            locket = levelup(location, { db: Locket })
             locket.open(step())
         }, function () {
             locket.put('b', JSON.stringify({ value: 1 }), step())
