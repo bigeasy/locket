@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Constrain to 0.0.7. #107.
  * Test get through LevelUP. #106.
  * Implement `Locket.approximateSize`. #104.
  * Upgrade Skip to 0.0.6. #103.
