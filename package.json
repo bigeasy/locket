@@ -47,7 +47,8 @@
     {
                         "proof":              "0.0.41",
                         "tap":                "*",
-                        "levelup":            "0.18.2"
+                        "levelup":            "0.18.2",
+                        "concat-stream":      "1.4.1"
     },
     "scripts":
     {

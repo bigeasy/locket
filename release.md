@@ -7,8 +7,10 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Test minimal stream via LevelUP. #108.
  * Upgrade Constrain to 0.0.7. #107.
  * Test get through LevelUP. #106.
+ * `LevelUP.createReadStream` with returns empty buffer. #105.
  * Implement `Locket.approximateSize`. #104.
  * Upgrade Skip to 0.0.6. #103.
  * Extract Dilute creation to Locket object. #102.
