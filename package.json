@@ -46,7 +46,8 @@
     "devDependencies":
     {
                         "proof":              "0.0.41",
-                        "tap":                "*"
+                        "tap":                "*",
+                        "levelup":            "0.18.2"
     },
     "scripts":
     {

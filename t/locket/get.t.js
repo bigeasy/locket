@@ -17,12 +17,12 @@ require('proof')(2, function (step, equal, deepEqual) {
         step(function () {
             rimraf(location, step())
         }, function () {
-            locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket = require('levelup')(location, { db: Locket })
+            locket.open(step())
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'NotFoundError: not found', 'get empty')
+            equal(error.status, 404, 'get empty')
         }])
     }, function () {
         var location = path.join(tmp, 'put')
@@ -30,14 +30,14 @@ require('proof')(2, function (step, equal, deepEqual) {
         step(function () {
             rimraf(location, step())
         }, function () {
-            locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket = require('levelup')(location, { db: Locket })
+            locket.open(step())
         }, function () {
             locket.put('b', JSON.stringify({ value: 1 }), step())
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'NotFoundError: not found', 'not found')
+            equal(error.status, 404, 'not found')
         }])
     })
 })
