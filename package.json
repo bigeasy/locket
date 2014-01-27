@@ -31,7 +31,7 @@
                         "timezone":           "0.0.22",
                         "mkdirp":             "~0.3",
                         "b-tree":             "0.0.16",
-                        "constrain":          "0.0.7",
+                        "constrain":          "https://github.com/bigeasy/constrain.git#f7bbb920ea25df22654f9b650f0139c5e326f155",
                         "revise":             "0.0.1",
                         "pair":               "0.0.3",
                         "riffle":             "0.0.4",
