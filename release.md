@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Implement `end` property. #114.
  * Upgrade Constrain to 0.0.8. #112.
  * Test minimal stream via LevelUP. #108.
  * Upgrade Constrain to 0.0.7. #107.
