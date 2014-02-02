@@ -84,18 +84,11 @@ Locket.prototype._snapshot = function () {
 
 Locket.prototype._dilution = cadence(function (step, range, versions) {
     step(function () {
-        var iterators = []
-        step(function () {
-            step(function (stage) {
-                mvcc.skip[range.direction](
-                    stage.tree, pair.compare, versions, {}, range.key, step()
-                )
-            }, function (iterator) {
-                iterators.push(iterator)
-            })([ { tree: this._primary } ].concat(this._stages))
-        }, function () {
-            return iterators
-        })
+        step(function (stage) {
+            return mvcc.skip[range.direction](
+                stage.tree, pair.compare, versions, {}, range.key, step()
+            )
+        })([], [ { tree: this._primary } ].concat(this._stages))
     }, function (iterators) {
         mvcc.designate[range.direction](pair.compare, function (record) {
             return record.operation == 'del'

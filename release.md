@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Open iterators using Cadence gathered loop. #116.
  * Upgrade Cadence to 0.0.34. #115.
  * Implement `end` property. #114.
  * Add `development` branch to `.travis.yml`. #113.
