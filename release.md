@@ -12,6 +12,7 @@ to build other databases.
  * Implement `end` property. #114.
  * Add `development` branch to `.travis.yml`. #113.
  * Upgrade Constrain to 0.0.8. #112.
+ * Update `LICENSE` for 2014. #109.
  * Test minimal stream via LevelUP. #108.
  * Upgrade Constrain to 0.0.7. #107.
  * Test get through LevelUP. #106.
