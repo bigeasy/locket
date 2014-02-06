@@ -56,7 +56,7 @@ Iterator.prototype._next = cadence(function (step) {
         iterator.next(step())
     }, function (record, key) {
         if (record) {
-            step(null, this._decoders.key(record.key), this._decoders.value(record.value))
+            return [ this._decoders.key(record.key), this._decoders.value(record.value) ]
         }
     })
 })
