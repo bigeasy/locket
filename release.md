@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Cadence to 0.0.35. #118.
  * Stop using Cadence boolean handlers. #117.
  * Open iterators using Cadence gathered loop. #116.
  * Upgrade Cadence to 0.0.34. #115.
