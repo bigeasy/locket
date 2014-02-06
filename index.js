@@ -214,10 +214,14 @@ Locket.prototype._open = cadence(function (step, options) {
             transactions.unlock()
         }], function () {
             step(function () {
-                transactions.next(step(false))
+                transactions.next(step())
             }, function (version) {
-                this._versions[version] = true
-                this._version = Math.max(this._version, version)
+                if(version) {
+                    this._versions[version] = true
+                    this._version = Math.max(this._version, version)
+                } else {
+                    step(null)
+                }
             })()
         })
     })
