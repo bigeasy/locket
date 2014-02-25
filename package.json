@@ -3,7 +3,6 @@
     "version":          "0.0.0",
     "author":           "Alan Gutierrez <alan@prettyrobots.com>",
     "description":      "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
-    "url":              "http://bigeasy.github.com/locket",
     "keywords":
     [
                         "btree", "leveldb", "levelup", "binary",

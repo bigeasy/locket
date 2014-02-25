@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Remove "url" from `package.json`. #120.
  * Upgrade Cadence to 0.0.35. #118.
  * Stop using Cadence boolean handlers. #117.
  * Open iterators using Cadence gathered loop. #116.
