@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Add Turnstile as a dependency. #125.
  * Upgrade Cadence to 0.0.36. #124.
  * Remove "url" from `package.json`. #120.
  * Upgrade Cadence to 0.0.35. #118.

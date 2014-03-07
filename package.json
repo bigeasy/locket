@@ -40,7 +40,8 @@
                         "twiddle":            "0.0.1",
                         "designate":          "0.0.3",
                         "skip":               "0.0.6",
-                        "dilute":             "0.0.3"
+                        "dilute":             "0.0.3",
+                        "turnstile":          "0.0.2"
     },
     "devDependencies":
     {
