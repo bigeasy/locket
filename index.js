@@ -343,6 +343,22 @@ Locket.prototype._merge = cadence(function (step) {
     })
 })
 
+// todo: make each tree an object that can balance.
+Locket.prototype._balance = cadence(function (step) {
+    var cassette = this._primary
+    if (cassette.tree.leafSize > cassette.operations) {
+        return
+    }
+    cassette.operations = 0
+    step(function () {
+        cassette.tree.balance(step())
+    }, function () {
+        if (cassette.tree.balanced) {
+            step(null)
+        }
+    })
+})
+
 Locket.prototype._batch = cadence(function (step, array, options) {
     var version = ++this._version
     step(function () {
