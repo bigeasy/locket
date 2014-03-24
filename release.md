@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Strata to 0.0.18. #128.
  * Upgrade Strata to 0.0.17. #127.
  * Upgrade Proof to 0.0.44. #126.
  * Add Turnstile as a dependency. #125.
