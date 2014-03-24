@@ -186,7 +186,7 @@ Locket.prototype._open = cadence(function (step, options) {
         if (exists && !files.length) {
             throw new Error('no stages, what happened?')
         }
-        files.sort().reverse()
+        files.sort(function (a, b) { return +(a) - +(b) }).reverse()
         step(function () {
             files.forEach(step([], function (letter) {
                 var strata = createStageStrata.call(this, letter)
