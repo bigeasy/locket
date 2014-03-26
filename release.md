@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Release version 0.0.1. #130.
  * Create `Options` to manage options. #129.
  * Upgrade Strata to 0.0.18. #128.
  * Upgrade Strata to 0.0.17. #127.
