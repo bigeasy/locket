@@ -30,20 +30,35 @@ var mvcc = {
     dilute: require('dilute')
 }
 
-function isTrue (options, property, defaultValue) {
-    return !!((property in options) ? options[property] : defaultValue)
+function Options (options, defaults) {
+    for (var key in options) {
+        this[key] = options[key]
+    }
+    for (var key in defaults) {
+        if (!(key in options)) {
+            this[key] = defaults[key]
+        }
+    }
 }
+
+// There are two ways to sort out options here, because there are great many
+// ways to specify encodings and its an amalgamation of iterator options and
+// database options. The Pair module makes this determination for us from an
+// array of options. Then we have options specific to the iterator, not related
+// to encodings.
 
 function Iterator (db, options) {
     var preferences = [ options, db._options ]
+    options = new Options(options, { keyAsBuffer: true, valueAsBuffer: true })
+
     this._db = db
     this._range = constrain(pair.compare, function (key) {
         return Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
     }, options)
     this._versions = this._db._snapshot()
     this._decoders = {
-        key: isTrue(options, 'keyAsBuffer', true) ? echo : pair.encoder.key(preferences).decode,
-        value: isTrue(options, 'valueAsBuffer', true) ? echo : pair.encoder.value(preferences).decode
+        key: options.keyAsBuffer ? echo : pair.encoder.key(preferences).decode,
+        value: options.valueAsBuffer ? echo : pair.encoder.value(preferences).decode
     }
 }
 util.inherits(Iterator, AbstractIterator)
@@ -228,6 +243,7 @@ Locket.prototype._open = cadence(function (step, options) {
 })
 
 Locket.prototype._get = cadence(function (step, key, options) {
+    options = new Options(options, { asBuffer: true })
     if (!Buffer.isBuffer(key)) {
         key = pair.encoder.key([ options, this._options ]).encode(key)
     }
@@ -239,7 +255,7 @@ Locket.prototype._get = cadence(function (step, key, options) {
             iterator.end(step())
         }, function () {
             if ($key && value && pair.compare($key, key) == 0) {
-                if (!isTrue(options, 'asBuffer', true)) {
+                if (!options.asBuffer) {
                     value = pair.encoder.value([ options, this._options ]).decode(value)
                 }
                 step(null, value)
