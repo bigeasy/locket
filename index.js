@@ -166,7 +166,7 @@ Locket.prototype._open = cadence(function (step, options) {
         var subdirs = [ 'archive', 'primary', 'stages', 'transactions' ]
         if (exists) {
           listing = listing.filter(function (file) { return file[0] != '.' }).sort()
-          if (listing.length && !listing.every(function (file, index) { return subdirs[index] == file })) {
+          if (!subdirs.every(function (file) { return listing.shift() == file }) || listing.length) {
               throw new Error('not a Locket datastore')
           }
         } else {

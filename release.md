@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Incorrectly verifying validity of Locket directory. #131.
  * Release version 0.0.1. #130.
  * Create `Options` to manage options. #129.
  * Upgrade Strata to 0.0.18. #128.
