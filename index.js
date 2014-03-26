@@ -159,14 +159,14 @@ Locket.prototype._open = cadence(function (step, options) {
                 throw new Error('does not exist')
             }
         }])(1)
-    }, function (listing) {
+    }, function (files) {
         if (exists && options.errorIfExists) {
             throw new Error('Locket database already exists')
         }
         var subdirs = [ 'archive', 'primary', 'stages', 'transactions' ]
         if (exists) {
-          listing = listing.filter(function (file) { return file[0] != '.' }).sort()
-          if (!subdirs.every(function (file) { return listing.shift() == file }) || listing.length) {
+          files = files.filter(function (file) { return file[0] != '.' }).sort()
+          if (!subdirs.every(function (file) { return files.shift() == file }) || files.length) {
               throw new Error('not a Locket datastore')
           }
         } else {
