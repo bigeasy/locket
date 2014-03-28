@@ -41,6 +41,38 @@ function Options (options, defaults) {
     }
 }
 
+var extractor = mvcc.revise.extractor(pair.extract);
+function Store (db, name) {
+    this.name = name
+    this.leafSize = db.leafSize
+    this.branchSize = db.branchSize
+    this.directory = path.join(db.location, 'stages', name)
+    this.tree = new Strata({
+        directory: this.directory,
+        extractor: extractor,
+        comparator: mvcc.revise.comparator(pair.compare),
+        serialize: pair.serializer,
+        deserialize: pair.deserializer,
+        leafSize: this.leafSize,
+        branchSize: this.branchSize
+    })
+}
+
+Store.prototype.balance = cadence(function (step) {
+    var cassette = this._primary
+    if (cassette.tree.leafSize > cassette.operations) {
+        return
+    }
+    cassette.operations = 0
+    step(function () {
+        cassette.tree.balance(step())
+    }, function () {
+        if (cassette.tree.balanced) {
+            step(null)
+        }
+    })()
+})
+
 // There are two ways to sort out options here, because there are great many
 // ways to specify encodings and its an amalgamation of iterator options and
 // database options. The Pair module makes this determination for us from an
@@ -115,31 +147,16 @@ Locket.prototype._dilution = cadence(function (step, range, versions) {
     })
 })
 
-var extractor = mvcc.revise.extractor(pair.extract)
-function createStageStrata (name) {
-    return new Strata({
-        directory: path.join(this.location, 'stages', name),
-        extractor: extractor,
-        comparator: mvcc.revise.comparator(pair.compare),
-        serialize: pair.serializer,
-        deserialize: pair.deserializer,
-        leafSize: 1024,
-        branchSize: 1024
-    })
-}
-
 var createStage = cadence(function (step, name) {
     name = String(name)
-
-    var strata = createStageStrata.call(this, name)
-    var stage = { name: name, tree: strata }
+    var stage = new Store(this, name)
 
     step (function () {
         mkdirp(path.join(this.location, 'stages', name), step())
     }, function () {
-        strata.create(step())
+        stage.tree.create(step())
     }, function () {
-        strata.open(step())
+        stage.tree.open(step())
     }, function () {
         return stage
     })
@@ -177,7 +194,7 @@ Locket.prototype._open = cadence(function (step, options) {
     }, function () {
         this._primary = new Strata({
             directory: path.join(this.location, 'primary'),
-            extractor: mvcc.revise.extractor(pair.extract),
+            extractor: extractor,
             comparator: mvcc.revise.comparator(pair.compare),
             serialize: pair.serializer,
             deserialize: pair.deserializer,
@@ -204,11 +221,11 @@ Locket.prototype._open = cadence(function (step, options) {
         files.sort(function (a, b) { return +(a) - +(b) }).reverse()
         step(function () {
             files.forEach(step([], function (letter) {
-                var strata = createStageStrata.call(this, letter)
+                var stage = new Store(this, letter)
                 step(function () {
-                    strata.open(step())
+                    stage.tree.open(step())
                 }, function () {
-                    return { name: letter, tree: strata }
+                    return stage
                 })
             }))
         }, function (stages) {
@@ -295,6 +312,7 @@ Locket.prototype._merge = cadence(function (step) {
             // todo: rename name to count.
             // todo: need to put next "name" in memory and increment, this
             // duplicates.
+            // todo: rename `name` to `order`.
             createStage.call(this, +(this._stages[0].name) + 1, step())
         }, function (stage) {
             step(function () {
@@ -356,22 +374,6 @@ Locket.prototype._merge = cadence(function (step) {
                 // todo: rimraf the archive file if we're not preserving the archive
             })
         }))
-    })
-})
-
-// todo: make each tree an object that can balance.
-Locket.prototype._balance = cadence(function (step) {
-    var cassette = this._primary
-    if (cassette.tree.leafSize > cassette.operations) {
-        return
-    }
-    cassette.operations = 0
-    step(function () {
-        cassette.tree.balance(step())
-    }, function () {
-        if (cassette.tree.balanced) {
-            step(null)
-        }
     })
 })
 
