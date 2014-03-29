@@ -7,6 +7,7 @@ to build other databases.
 
 ### Issue by Issue
 
+ * Upgrade Timezone to 0.0.30. #133.
  * Create object to wrap Strata tree. #132.
  * Incorrectly verifying validity of Locket directory. #131.
  * Release version 0.0.1. #130.
