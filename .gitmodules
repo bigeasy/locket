@@ -1,6 +1,3 @@
-[submodule "locket"]
-	path = locket
-	url = https://github.com/bigeasy/locket.git
 [submodule "vendor/lesshat"]
 	path = vendor/lesshat
 	url = https://github.com/CSSHat/LESSHat.git
