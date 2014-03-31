@@ -1,0 +1,19 @@
+body {
+    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    text-align: center;
+}
+
+.content {
+    width: 960px;
+    margin: auto auto;
+    text-align: left;
+}
+
+th, td {
+    text-align: left;
+    padding: 5px 15px;
+}
+
+td.numeric {
+    text-align: right;
+}
