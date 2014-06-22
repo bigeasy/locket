@@ -66,7 +66,3 @@ performant as any merge.
 ## Extract Iterators / Merge
 
 May as well extract our nice iterator and merge into `strata.merge`.
-
-## Changes for Next Release
-
- * Initial commit of empty project. #2.
