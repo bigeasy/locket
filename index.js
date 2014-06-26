@@ -214,6 +214,7 @@ Locket.prototype._open = cadence(function (step, options) {
     }, function () {
         fs.readdir(path.join(this.location, 'stages'), step())
     }, function (files) {
+        files = files.filter(function (file) { return file[0] != '.' });
         // todo: replication is probably going to mean that no stages is okay.
         if (exists && !files.length) {
             throw new Error('no stages, what happened?')
