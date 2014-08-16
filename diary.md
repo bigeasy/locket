@@ -66,3 +66,16 @@ performant as any merge.
 ## Extract Iterators / Merge
 
 May as well extract our nice iterator and merge into `strata.merge`.
+
+## In-Memory Merge
+
+One at a time, it would be simple to insert an entry into a tree. When it is a
+batch, if the batch is large, say a large append, we're going to block everyone
+if we are appending to a staging log that is already part of the collective
+tree. Anyone reading is going to wait on the write to the tail.
+
+However, we're only writing in the sense that we're merging the batch, not in
+the sense that we're waiting for the write to flush.
+
+I start to worry about when a version is committed, but then I recall that this
+is not a concern for LevelDB and is therefore not a concern for Locket.
