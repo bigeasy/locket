@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Asynchronous `unlock`. #142.
  * Upgrade Proof to 0.0.46. #141.
  * Upgrade Cadence to 0.0.38 #140.
  * Upgrade Turnstile to 0.0.3. #134.

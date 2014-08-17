@@ -108,10 +108,9 @@ Iterator.prototype._next = cadence(function (step) {
     })
 })
 
-Iterator.prototype._end = function (callback) {
-    this._iterator.unlock()
-    callback()
-}
+Iterator.prototype._end = cadence(function (step) {
+    this._iterator.unlock(step())
+})
 
 function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
@@ -244,7 +243,7 @@ Locket.prototype._open = cadence(function (step, options) {
         mvcc.riffle.forward(this._transactions, step())
     }, function (transactions) {
         step([function () {
-            transactions.unlock()
+            transactions.unlock(step())
         }], function () {
             step(function () {
                 transactions.next(step())
@@ -342,7 +341,7 @@ Locket.prototype._merge = cadence(function (step) {
                 return record.operation == 'del'
             }, 0, this._primary, iterator, step())
         }, function () {
-            iterator.unlock()
+            iterator.unlock(step())
         })
     }, function () {
         // no need to lock exclusive, anyone using these trees at the end
@@ -400,7 +399,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
                 cursor.insert(version, version, ~ cursor.index, step())
             }, function () {
                 this._versions[version] = true
-                cursor.unlock()
+                cursor.unlock(step())
             })
         })
     })
@@ -415,7 +414,7 @@ Locket.prototype._approximateSize = cadence(function (step, from, to) {
     }, function (iterator) {
         var approximateSize = 0
         step([function () {
-            iterator.unlock()
+            iterator.unlock(step())
         }], function () {
             step(function () {
                 iterator.next(step())

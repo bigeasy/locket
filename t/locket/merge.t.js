@@ -20,7 +20,7 @@ require('proof')(4, function (step, equal, deepEqual) {
             locket = new Locket(location)
             locket.open({ createIfMissing: true }, step())
         }, function () {
-            locket.batch([], step)
+            locket.batch([], step())
         }, function () {
             locket.batch([
               { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) },
