@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Cadence to 0.0.38 #140.
  * Upgrade Turnstile to 0.0.3. #134.
  * Upgrade Timezone to 0.0.30. #133.
  * Create object to wrap Strata tree. #132.
