@@ -310,16 +310,14 @@ Locket.prototype._merge = cadence(function (step) {
         // stage, it will happen in one tick, super quick.
         step(function () {
             // todo: rename name to count.
-            // todo: need to put next "name" in memory and increment, this
-            // duplicates.
+            // todo: need to put next "name" in memory and increment, this duplicates.
             // todo: rename `name` to `order`.
             createStage.call(this, +(this._stages[0].name) + 1, step())
         }, function (stage) {
             step(function () {
-                this._sequester.exclude(step())
+                this._sequester.exclude(step(step, [function () { this._sequester.unlock() }]))
             }, function () {
                 this._stages.unshift(stage)
-                this._sequester.unlock()
             })
         })
     }, function () {
