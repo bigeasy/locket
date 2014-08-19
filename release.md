@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Abstract LevelDOWN to 0.12. #143.
  * Asynchronous `unlock`. #142.
  * Upgrade Proof to 0.0.46. #141.
  * Upgrade Cadence to 0.0.38 #140.
