@@ -382,6 +382,7 @@ Locket.prototype._batch = cadence(function (step, array, options) {
     step(function () {
         this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
     }, function () {
+        // todo: how does this work without a sorted array?
         var properties = [ options, this._options ]
         var batch = mvcc.advance(array, function (entry, callback) {
             var record = pair.record(entry.key, entry.value, entry.type, version, properties)
