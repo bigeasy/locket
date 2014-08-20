@@ -42,11 +42,11 @@ function Options (options, defaults) {
 }
 
 var extractor = mvcc.revise.extractor(pair.extract);
-function Store (db, name) {
-    this.name = name
+function Store (db, number) {
+    this.number = number
     this.leafSize = db.leafSize
     this.branchSize = db.branchSize
-    this.directory = path.join(db.location, 'stages', name)
+    this.directory = path.join(db.location, 'stages', String(number))
     this.tree = new Strata({
         directory: this.directory,
         extractor: extractor,
@@ -146,12 +146,11 @@ Locket.prototype._dilution = cadence(function (step, range, versions) {
     })
 })
 
-var createStage = cadence(function (step, name) {
-    name = String(name)
-    var stage = new Store(this, name)
+var createStage = cadence(function (step, number) {
+    var stage = new Store(this, +number)
 
     step (function () {
-        mkdirp(path.join(this.location, 'stages', name), step())
+        mkdirp(path.join(this.location, 'stages', String(number)), step())
     }, function () {
         stage.tree.create(step())
     }, function () {
@@ -213,15 +212,17 @@ Locket.prototype._open = cadence(function (step, options) {
     }, function () {
         fs.readdir(path.join(this.location, 'stages'), step())
     }, function (files) {
-        files = files.filter(function (file) { return file[0] != '.' });
+        files = files.filter(function (file) { return file[0] != '.' })
+                     .map(function (file) { return +file })
+                     .sort(function (a, b) { return a - b }).reverse()
         // todo: replication is probably going to mean that no stages is okay.
+        // todo: no stages is going to be just file, really.
         if (exists && !files.length) {
             throw new Error('no stages, what happened?')
         }
-        files.sort(function (a, b) { return +(a) - +(b) }).reverse()
         step(function () {
-            files.forEach(step([], function (letter) {
-                var stage = new Store(this, letter)
+            files.forEach(step([], function (number) {
+                var stage = new Store(this, number)
                 step(function () {
                     stage.tree.open(step())
                 }, function () {
@@ -309,10 +310,7 @@ Locket.prototype._merge = cadence(function (step) {
         // we need to stop the world just long enough to unshift the new
         // stage, it will happen in one tick, super quick.
         step(function () {
-            // todo: rename name to count.
-            // todo: need to put next "name" in memory and increment, this duplicates.
-            // todo: rename `name` to `order`.
-            createStage.call(this, +(this._stages[0].name) + 1, step())
+            createStage.call(this, this._stages[0].number + 1, step())
         }, function (stage) {
             step(function () {
                 this._sequester.exclude(step(step, [function () { this._sequester.unlock() }]))
@@ -362,7 +360,7 @@ Locket.prototype._merge = cadence(function (step) {
         mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
     }, function () {
         this._stages.splice(1).forEach(step([], function (stage) {
-            var from = path.join(this.location, 'stages', stage.name)
+            var from = path.join(this.location, 'stages', String(stage.number))
             var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage)
             var to = path.join(this.location, 'archive', filename)
             // todo: note that archive and stage need to be on same file system.

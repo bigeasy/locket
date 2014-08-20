@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Rename `Stage.number`. #145.
  * Fix lock order. #144.
  * Upgrade Abstract LevelDOWN to 0.12. #143.
  * Asynchronous `unlock`. #142.
