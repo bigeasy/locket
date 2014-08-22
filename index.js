@@ -44,6 +44,7 @@ function Options (options, defaults) {
 var extractor = mvcc.revise.extractor(pair.extract);
 function Stage (db, number) {
     this.number = number
+    this.location = db.location
     this.leafSize = db.leafSize
     this.branchSize = db.branchSize
     this.directory = path.join(db.location, 'stages', String(number))
@@ -71,6 +72,16 @@ Stage.prototype.balance = cadence(function (step) {
             step(null)
         }
     })()
+})
+
+Stage.prototype.create = cadence(function (step, number) {
+    step (function () {
+        mkdirp(path.join(this.location, 'stages', String(this.number)), step())
+    }, function () {
+        this.tree.create(step())
+    }, function () {
+        this.tree.open(step())
+    })
 })
 
 // There are two ways to sort out options here, because there are great many
@@ -146,20 +157,6 @@ Locket.prototype._dilution = cadence(function (step, range, versions) {
     })
 })
 
-var createStage = cadence(function (step, number) {
-    var stage = new Stage(this, +number)
-
-    step (function () {
-        mkdirp(path.join(this.location, 'stages', String(number)), step())
-    }, function () {
-        stage.tree.create(step())
-    }, function () {
-        stage.tree.open(step())
-    }, function () {
-        return stage
-    })
-})
-
 Locket.prototype._open = cadence(function (step, options) {
     var exists = true
     this._options = options
@@ -231,9 +228,9 @@ Locket.prototype._open = cadence(function (step, options) {
             }))
         }, function (stages) {
             this._stages = stages
-            createStage.call(this, files.length ? +(files[0]) + 1 : 1, step())
-        }, function (stage) {
+            var stage = new Stage(this, files.length ? files[0] + 1 : 1)
             this._stages.unshift(stage)
+            stage.create(step())
         })
     }, function () {
         this._isOpened = true
@@ -310,7 +307,12 @@ Locket.prototype._merge = cadence(function (step) {
         // we need to stop the world just long enough to unshift the new
         // stage, it will happen in one tick, super quick.
         step(function () {
-            createStage.call(this, this._stages[0].number + 1, step())
+            var stage = new Stage(this, this._stages[0].number + 1)
+            step(function () {
+                stage.create(step())
+            }, function () {
+                return stage
+            })
         }, function (stage) {
             step(function () {
                 this._sequester.exclude(step(step, [function () { this._sequester.unlock() }]))
