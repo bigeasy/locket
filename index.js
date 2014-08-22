@@ -42,7 +42,7 @@ function Options (options, defaults) {
 }
 
 var extractor = mvcc.revise.extractor(pair.extract);
-function Store (db, number) {
+function Stage (db, number) {
     this.number = number
     this.leafSize = db.leafSize
     this.branchSize = db.branchSize
@@ -58,7 +58,7 @@ function Store (db, number) {
     })
 }
 
-Store.prototype.balance = cadence(function (step) {
+Stage.prototype.balance = cadence(function (step) {
     var cassette = this._primary
     if (cassette.tree.leafSize > cassette.operations) {
         return
@@ -147,7 +147,7 @@ Locket.prototype._dilution = cadence(function (step, range, versions) {
 })
 
 var createStage = cadence(function (step, number) {
-    var stage = new Store(this, +number)
+    var stage = new Stage(this, +number)
 
     step (function () {
         mkdirp(path.join(this.location, 'stages', String(number)), step())
@@ -222,7 +222,7 @@ Locket.prototype._open = cadence(function (step, options) {
         }
         step(function () {
             files.forEach(step([], function (number) {
-                var stage = new Store(this, number)
+                var stage = new Stage(this, number)
                 step(function () {
                     stage.tree.open(step())
                 }, function () {
