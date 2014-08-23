@@ -212,6 +212,7 @@ Locket.prototype._open = cadence(function (step, options) {
         files = files.filter(function (file) { return file[0] != '.' })
                      .map(function (file) { return +file })
                      .sort(function (a, b) { return a - b }).reverse()
+        this._maxStageNumber = Math.max.apply(Math, files.concat(0))
         // todo: replication is probably going to mean that no stages is okay.
         // todo: no stages is going to be just file, really.
         if (exists && !files.length) {

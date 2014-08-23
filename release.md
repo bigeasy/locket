@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Calculate max stage number at reopen. #147.
  * Rename `Store` to `Stage`. #146.
  * Rename `Stage.number`. #145.
  * Fix lock order. #144.
