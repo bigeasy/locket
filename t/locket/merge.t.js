@@ -22,22 +22,21 @@ require('proof')(4, function (step, equal, deepEqual) {
         }, function () {
             locket.batch([], step())
         }, function () {
-            locket.batch([
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) },
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 0 }) },
-              { type: 'put', key: 'c', value: JSON.stringify({ value: 2 }) },
-              { type: 'put', key: 'b', value: JSON.stringify({ value: 1 }) }
-            ], step())
+            var batch = []
+            for (var i = 0; i < 2048; i++) {
+                batch.push({ type: 'put', key: i, value: JSON.stringify({ value: i }) })
+            }
+            locket.batch(batch, step())
         }, function () {
-            locket.get('a', step())
+            locket.get(0, step())
         }, function (got) {
             deepEqual(JSON.parse(got), { value: 0 }, 'unmerged')
         }, function () {
             locket._merge(step())
         }, function () {
-            locket.get('a', step())
-            locket.get('b', step())
-            locket.get('c', step())
+            locket.get(0, step())
+            locket.get(1, step())
+            locket.get(2, step())
         }, function (a, b, c) {
             deepEqual(JSON.parse(a), { value: 0 }, 'merged a')
             deepEqual(JSON.parse(b), { value: 1 }, 'merged b')

@@ -42,11 +42,13 @@ function Options (options, defaults) {
 }
 
 var extractor = mvcc.revise.extractor(pair.extract);
-function Stage (db, number) {
+function Stage (db, number, status) {
     this.number = number
     this.location = db.location
     this.leafSize = db.leafSize
     this.branchSize = db.branchSize
+    this.status = status
+    this.count = 0
     this.directory = path.join(db.location, 'stages', String(number))
     this.tree = new Strata({
         directory: this.directory,
@@ -126,7 +128,6 @@ Iterator.prototype._end = cadence(function (step) {
 function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
     AbstractLevelDOWN.call(this, location)
-    this._sequester = sequester.createLock()
     this._merging = sequester.createLock()
 }
 util.inherits(Locket, AbstractLevelDOWN)
@@ -215,7 +216,7 @@ Locket.prototype._open = cadence(function (step, options) {
         this._maxStageNumber = Math.max.apply(Math, files.concat(0))
         step(function () {
             files.forEach(step([], function (number) {
-                var stage = new Stage(this, number)
+                var stage = new Stage(this, number, 'full')
                 step(function () {
                     stage.tree.open(step())
                 }, function () {
@@ -224,9 +225,6 @@ Locket.prototype._open = cadence(function (step, options) {
             }))
         }, function (stages) {
             this._stages = stages
-            var stage = new Stage(this, files.length ? files[0] + 1 : 1)
-            this._stages.unshift(stage)
-            stage.create(step())
         })
     }, function () {
         this._isOpened = true
@@ -298,104 +296,120 @@ Locket.prototype._merge = cadence(function (step) {
     step(function () {
         this._merging.exclude(step(step, [function () { this._merging.unlock() }]))
     }, function () {
-        // add a new stage.
-        //
-        // we need to stop the world just long enough to unshift the new
-        // stage, it will happen in one tick, super quick.
-        step(function () {
-            var stage = new Stage(this, this._stages[0].number + 1)
-            step(function () {
-                stage.create(step())
-            }, function () {
-                return stage
-            })
-        }, function (stage) {
-            step(function () {
-                this._sequester.exclude(step(step, [function () { this._sequester.unlock() }]))
-            }, function () {
-                this._stages.unshift(stage)
-            })
+        var stages = this._stages.filter(function (stage) {
+            return (stage.status == 'idle' && stage.count > 1024 * 0.74)
+                || (stage.status == 'full')
         })
-    }, function () {
-        this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
-    }, function () {
-        // make serial
-        this._stageTrees(1).forEach(step([], function (tree) {
-            mvcc.skip.forward(tree, pair.compare, this._versions, merged, this._start, step())
-        }))
-    }, function (iterators) {
-        mvcc.designate.forward(pair.compare, function (record) {
-            return false
-        }, iterators, step())
-    }, function (iterator) {
+        stages.forEach(function (stage) {
+            stage.status = 'merge'
+        })
         step(function () {
+            stages.map(function (stage) {
+                return stage.tree
+            }).forEach(step([], function (tree) {
+                mvcc.skip.forward(tree, pair.compare, this._versions, merged, this._start, step())
+            }))
+        }, function (iterators) {
+            mvcc.designate.forward(pair.compare, function (record) {
+                return false
+            }, iterators, step())
+        }, function (iterator) {
             // todo: amalgamate is going to set the version, which is wrong, it
             // should assert the version, and the version should be correct.
-            mvcc.amalgamate(function (record) {
-                return record.operation == 'del'
-            }, 0, this._primary, iterator, step())
-        }, function () {
-            iterator.unlock(step())
-        })
-    }, function () {
-        // no need to lock exclusive, anyone using these trees at the end
-        // gets the same result as not using them.
-        var iterator = mvcc.advance(Object.keys(merged).sort(), function (element, callback) {
-            callback(null, element, element)
-        })
-        // todo: maybe passing a string makes a function for you.
-        // todo: any case where a transaction is in an inbetween state? A state
-        // where it has been removed from the transactions tree, but it exists
-        // in the other trees? Or worse, an earlier version remains in the
-        // transaction tree, so that when we replay it causes an earlier version
-        // to win? Yes, we're writing in order. How much do we trust a Strata
-        // write? Quite a bit I think. I'm imagining that we need to trust a
-        // write to some degree, that it will only be a half bitten append,
-        // therefore, we would have written out deletes in order, which means
-        // that only the latest versions are in the tree. Would you rather I
-        // write out version numbers as file names in a directory? Atomic
-        // according to everything else you believe.
-        mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
-    }, function () {
-        this._stages.splice(1).forEach(step([], function (stage) {
-            var from = path.join(this.location, 'stages', String(stage.number))
-            var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage)
-            var to = path.join(this.location, 'archive', filename)
-            // todo: note that archive and stage need to be on same file system.
             step(function () {
-                fs.rename(from, to, step())
+                mvcc.amalgamate(function (record) {
+                    return record.operation == 'del'
+                }, 0, this._primary, iterator, step())
             }, function () {
-                // todo: rimraf the archive file if we're not preserving the archive
+                iterator.unlock(step())
             })
-        }))
+        }, function () {
+            // no need to lock exclusive, anyone using these trees at the end
+            // gets the same result as not using them.
+            var iterator = mvcc.advance(Object.keys(merged).sort(), function (element, callback) {
+                callback(null, element, element)
+            })
+            // todo: maybe passing a string makes a function for you.
+            // todo: any case where a transaction is in an inbetween state? A
+            // state where it has been removed from the transactions tree, but
+            // it exists in the other trees? Or worse, an earlier version
+            // remains in the transaction tree, so that when we replay it causes
+            // an earlier version to win? Yes, we're writing in order. How much
+            // do we trust a Strata write? Quite a bit I think. I'm imagining
+            // that we need to trust a write to some degree, that it will only
+            // be a half bitten append, therefore, we would have written out
+            // deletes in order, which means that only the latest versions are
+            // in the tree. Would you rather I write out version numbers as file
+            // names in a directory? Atomic according to everything else you
+            // believe.
+            mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
+        }, function () {
+            this._stages.filter(function (stage) {
+                return stage.status == 'merge'
+            }).forEach(step([], function (stage) {
+                var from = path.join(this.location, 'stages', String(stage.number))
+                var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage)
+                var to = path.join(this.location, 'archive', filename)
+                // todo: note that archive and stage need to be on same file system.
+                step(function () {
+                    fs.rename(from, to, step())
+                }, function () {
+                    // todo: rimraf the archive file if we're not preserving the archive
+                })
+            }))
+        }, function () {
+            this._stages = this._stages.filter(function (stage) {
+                return stage.status != 'merge'
+            })
+        })
     })
 })
 
 Locket.prototype._batch = cadence(function (step, array, options) {
     var version = ++this._version
     step(function () {
-        this._sequester.share(step(step, [function () { this._sequester.unlock() }]))
-    }, function () {
-        // todo: how does this work without a sorted array?
-        var properties = [ options, this._options ]
-        var batch = mvcc.advance(array, function (entry, callback) {
-            var record = pair.record(entry.key, entry.value, entry.type, version, properties)
-            var key = extractor(record)
-            callback(null, record, key)
-        })
-        mvcc.amalgamate(function () {
-            return false
-        }, version, this._stages[0].tree, batch, step())
-    }, function () {
+        var stage = this._stages.filter(function (stage) {
+            return stage.status == 'idle'
+        }).pop();
+        if (stage) return stage
+        stage = new Stage(this, ++this._maxStageNumber, 'active')
+        this._stages.unshift(stage)
+        // todo: can I both return and wait?
+        // create.stage(step())
+        // return stage
         step(function () {
-            this._transactions.mutator(version, step())
-        }, function (cursor) {
-            step(function () {
-                cursor.insert(version, version, ~ cursor.index, step())
-            }, function () {
-                this._versions[version] = true
-                cursor.unlock(step())
+            stage.create(step())
+        }, function () {
+            return stage
+        })
+    }, function (stage) {
+        step(function () {
+            stage.status = 'active'
+            stage.count += array.length
+            // Array does not need to be sorted because it is being inserted into a
+            // tree with only one leaf.
+            var properties = [ options, this._options ]
+            var batch = mvcc.advance(array, function (entry, callback) {
+                var record = pair.record(entry.key, entry.value, entry.type, version, properties)
+                var key = extractor(record)
+                callback(null, record, key)
             })
+            mvcc.amalgamate(function () {
+                return false
+            }, version, stage.tree, batch, step())
+        }, function () {
+            step(function () {
+                this._transactions.mutator(version, step())
+            }, function (cursor) {
+                step(function () {
+                    cursor.insert(version, version, ~ cursor.index, step())
+                }, function () {
+                    cursor.unlock(step())
+                })
+            })
+        }, function () {
+            stage.status = 'idle'
+            this._versions[version] = true
         })
     })
 })

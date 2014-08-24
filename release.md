@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Add stage at batch instead of open. #149.
  * Remove no stages assertion. #148.
  * Calculate max stage number at reopen. #147.
  * Rename `Store` to `Stage`. #146.

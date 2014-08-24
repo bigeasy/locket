@@ -43,7 +43,7 @@ require('proof')(7, function (step, equal, deepEqual) {
             deepEqual(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'created')
             fs.readdir(path.join(empty, 'stages'), step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ '1' ], 'stages created')
+            deepEqual(listing.sort(), [], 'stages created')
         }, function () {
             locket.close(step())
         })
@@ -68,7 +68,7 @@ require('proof')(7, function (step, equal, deepEqual) {
             deepEqual(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'reopened')
             fs.readdir(path.join(empty, 'stages'), step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ '1', '2' ], 'stages reopened')
+            deepEqual(listing.sort(), [], 'stages reopened')
         }, function () {
             locket.close(step())
         }, function () {
