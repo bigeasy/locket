@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Test get using buffer. #154.
  * Test reopening and merging previous stages. #152.
  * Use pre-tree flush in stages. #151.
  * Add stage at batch instead of open. #149.

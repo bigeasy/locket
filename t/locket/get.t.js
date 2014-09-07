@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, assert) {
+require('proof')(3, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -39,6 +39,10 @@ require('proof')(2, function (step, assert) {
             locket.get('a', step())
         }, function (_, error) {
             assert(error.status, 404, 'not found')
-        }])
+        }], function () {
+            locket.get(new Buffer('b'), step())
+        }, function (value) {
+            assert(JSON.parse(value), { value: 1 }, 'got')
+        })
     })
 })
