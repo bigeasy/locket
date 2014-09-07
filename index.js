@@ -272,10 +272,6 @@ Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
-Locket.prototype._stageTrees = function (index) {
-    return this._stages.slice(index).map(function (stage) { return stage.tree })
-}
-
 Locket.prototype._merge = cadence(function (step) {
     var merged = {}
     step(function () {
