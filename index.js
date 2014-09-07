@@ -336,7 +336,7 @@ Locket.prototype._merge = cadence(function (step) {
                 return stage.status == 'merge'
             }).forEach(step([], function (stage) {
                 var from = path.join(this.location, 'stages', String(stage.number))
-                var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage)
+                var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage.number)
                 var to = path.join(this.location, 'archive', filename)
                 // todo: note that archive and stage need to be on same file system.
                 step(function () {
