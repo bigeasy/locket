@@ -11,6 +11,7 @@ require('proof')(4, function (step, equal, deepEqual) {
 
     var tmp = path.join(__dirname, '../tmp')
 
+//    Error.stackTraceLimit = Infinity
     step(function () {
         var location = path.join(tmp, 'put')
         var locket
@@ -23,7 +24,7 @@ require('proof')(4, function (step, equal, deepEqual) {
             locket.batch([], step())
         }, function () {
             var batch = []
-            for (var i = 0; i < 2048; i++) {
+            for (var i = 0; i < 1024; i++) {
                 batch.push({ type: 'put', key: i, value: JSON.stringify({ value: i }) })
             }
             locket.batch(batch, step())

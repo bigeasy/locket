@@ -61,21 +61,6 @@ function Stage (db, number, status) {
     })
 }
 
-Stage.prototype.balance = cadence(function (step) {
-    var cassette = this._primary
-    if (cassette.tree.leafSize > cassette.operations) {
-        return
-    }
-    cassette.operations = 0
-    step(function () {
-        cassette.tree.balance(step())
-    }, function () {
-        if (cassette.tree.balanced) {
-            step(null)
-        }
-    })()
-})
-
 Stage.prototype.create = cadence(function (step, number) {
     step (function () {
         mkdirp(path.join(this.location, 'stages', String(this.number)), step())
@@ -343,6 +328,12 @@ Locket.prototype._merge = cadence(function (step) {
             // names in a directory? Atomic according to everything else you
             // believe.
             mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
+        }, function () {
+            var loop = step(function () {
+                this._primary.balance(step())
+            }, function () {
+                if (this._primary.balanced) return loop
+            })()
         }, function () {
             this._stages.filter(function (stage) {
                 return stage.status == 'merge'
