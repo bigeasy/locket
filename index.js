@@ -57,7 +57,8 @@ function Stage (db, number, status) {
         serialize: pair.serializer,
         deserialize: pair.deserializer,
         leafSize: this.leafSize,
-        branchSize: this.branchSize
+        branchSize: this.branchSize,
+        writeStage: 'entry'
     })
 }
 

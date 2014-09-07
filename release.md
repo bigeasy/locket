@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Use pre-tree flush in stages. #151.
  * Add stage at batch instead of open. #149.
  * Remove no stages assertion. #148.
  * Calculate max stage number at reopen. #147.
