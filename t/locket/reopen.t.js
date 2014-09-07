@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(3, function (step, equal, deepEqual) {
+require('proof')(3, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -38,9 +38,9 @@ require('proof')(3, function (step, equal, deepEqual) {
             locket.get(1, step())
             locket.get(2, step())
         }, function (a, b, c) {
-            deepEqual(JSON.parse(a), { value: 0 }, 'merged a')
-            deepEqual(JSON.parse(b), { value: 1 }, 'merged b')
-            deepEqual(JSON.parse(c), { value: 2 }, 'merged c')
+            assert(JSON.parse(a), { value: 0 }, 'merged a')
+            assert(JSON.parse(b), { value: 1 }, 'merged b')
+            assert(JSON.parse(c), { value: 2 }, 'merged c')
         })
     })
 })

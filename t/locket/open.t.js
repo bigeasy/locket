@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(7, function (step, equal, deepEqual) {
+require('proof')(7, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
     var tmp = path.join(__dirname, '../tmp')
@@ -17,7 +17,7 @@ require('proof')(7, function (step, equal, deepEqual) {
             locket = new Locket(invalid)
             locket.open({ createIfMissing: false }, step())
         }, function (_, error) {
-          equal(error.message, 'does not exist')
+          assert(error.message, 'does not exist')
         }])
     }, function () {
         var locket
@@ -27,7 +27,7 @@ require('proof')(7, function (step, equal, deepEqual) {
             locket = new Locket(__dirname)
             locket.open(step())
         }, function (_, error) {
-          equal(error.message, 'not a Locket datastore')
+          assert(error.message, 'not a Locket datastore')
         }])
     }, function () {
         var empty = path.join(tmp, 'empty')
@@ -40,10 +40,10 @@ require('proof')(7, function (step, equal, deepEqual) {
         }, function () {
             fs.readdir(empty, step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'created')
+            assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'created')
             fs.readdir(path.join(empty, 'stages'), step())
         }, function (listing) {
-            deepEqual(listing.sort(), [], 'stages created')
+            assert(listing.sort(), [], 'stages created')
         }, function () {
             locket.close(step())
         })
@@ -54,7 +54,7 @@ require('proof')(7, function (step, equal, deepEqual) {
             locket = new Locket(existing)
             locket.open({ createIfMissing: false, errorIfExists: true }, step())
         }, function (_, error) {
-            equal(error.message, 'Locket database already exists', 'errorIfExists')
+            assert(error.message, 'Locket database already exists', 'errorIfExists')
         }])
     }, function () {
         var empty = path.join(tmp, 'empty')
@@ -65,10 +65,10 @@ require('proof')(7, function (step, equal, deepEqual) {
         }, function () {
             fs.readdir(empty, step())
         }, function (listing) {
-            deepEqual(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'reopened')
+            assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'reopened')
             fs.readdir(path.join(empty, 'stages'), step())
         }, function (listing) {
-            deepEqual(listing.sort(), [], 'stages reopened')
+            assert(listing.sort(), [], 'stages reopened')
         }, function () {
             locket.close(step())
         }, function () {

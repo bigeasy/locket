@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, equal, deepEqual) {
+require('proof')(2, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -23,7 +23,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.status, 404, 'get empty')
+            assert(error.status, 404, 'get empty')
         }])
     }, function () {
         var location = path.join(tmp, 'put')
@@ -38,7 +38,7 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.status, 404, 'not found')
+            assert(error.status, 404, 'not found')
         }])
     })
 })

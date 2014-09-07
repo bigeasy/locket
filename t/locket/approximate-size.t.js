@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, equal, deepEqual) {
+require('proof')(2, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -30,11 +30,11 @@ require('proof')(2, function (step, equal, deepEqual) {
         }, function () {
             locket.approximateSize('a', 'c', step())
         }, function (size) {
-            deepEqual(size, 183, 'all')
+            assert(size, 183, 'all')
         }, function () {
             locket.approximateSize('a', 'b', step())
         }, function (size) {
-            deepEqual(size, 122, 'some')
+            assert(size, 122, 'some')
         }, function () {
             locket.close(step())
         })

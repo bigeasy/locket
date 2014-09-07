@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (step, equal, deepEqual) {
+require('proof')(1, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -26,7 +26,7 @@ require('proof')(1, function (step, equal, deepEqual) {
         }, [function () {
             locket.get('a', step())
         }, function (_, error) {
-            equal(error.message, 'NotFoundError: not found', 'not found')
+            assert(error.message, 'NotFoundError: not found', 'not found')
         }])
     })
 })

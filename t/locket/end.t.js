@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (step, ok, equal, deepEqual) {
+require('proof')(1, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -49,7 +49,7 @@ require('proof')(1, function (step, ok, equal, deepEqual) {
             step(function () {
                 iterator.next(step())
             }, function(key, val) {
-                ok(key == null && val == null, 'nothing')
+                assert(key == null && val == null, 'nothing')
                 iterator.end(step())
             })
         }, function () {

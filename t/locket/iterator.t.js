@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(4, function (step, equal, deepEqual) {
+require('proof')(4, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -36,7 +36,7 @@ require('proof')(4, function (step, equal, deepEqual) {
                     else step(null)
                 })()
             }, function () {
-                deepEqual(keys, [ 'a', 'b', 'c' ], 'left most to end')
+                assert(keys, [ 'a', 'b', 'c' ], 'left most to end')
                 iterator.end(step())
             })
         }, function () {
@@ -57,8 +57,8 @@ require('proof')(4, function (step, equal, deepEqual) {
                     }
                 })()
             }, function () {
-                deepEqual(keys, [ 'a', 'b', 'c' ], 'keys not as buffer')
-                deepEqual(values, [ 'able', 'baker', 'charlie' ], 'values not as buffer')
+                assert(keys, [ 'a', 'b', 'c' ], 'keys not as buffer')
+                assert(values, [ 'able', 'baker', 'charlie' ], 'values not as buffer')
                 iterator.end(step())
             })
         }, function () {
@@ -72,7 +72,7 @@ require('proof')(4, function (step, equal, deepEqual) {
                     else step(null)
                 })()
             }, function () {
-                deepEqual(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
+                assert(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
                 iterator.end(step())
             })
         }, function () {

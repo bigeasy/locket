@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, ok, equal, deepEqual) {
+require('proof')(2, function (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -27,8 +27,8 @@ require('proof')(2, function (step, ok, equal, deepEqual) {
             var read = locket.createReadStream(),
                 consume = concat(function(rows) {
                     var record = rows.shift()
-                    equal(record.key, 'a', 'key')
-                    equal(record.value, '1', 'value')
+                    assert(record.key, 'a', 'key')
+                    assert(record.value, '1', 'value')
                 })
             read.pipe(consume)
             consume.once('finish', step(-1))
