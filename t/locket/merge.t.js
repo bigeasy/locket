@@ -19,6 +19,8 @@ require('proof')(4, function (step, assert) {
             rimraf(location, step())
         }, function () {
             locket = new Locket(location)
+            locket._primaryBranchSize = 16
+            locket._primaryLeafSize = 16
             locket.open({ createIfMissing: true }, step())
         }, function () {
             locket.batch([], step())
@@ -42,6 +44,16 @@ require('proof')(4, function (step, assert) {
             assert(JSON.parse(a), { value: 0 }, 'merged a')
             assert(JSON.parse(b), { value: 1 }, 'merged b')
             assert(JSON.parse(c), { value: 2 }, 'merged c')
+        }, function () {
+            console.log('here')
+            var batch = []
+            for (var i = 0; i < 1024; i++) {
+                batch.push({ type: 'del', key: i })
+            }
+            locket.batch(batch, step())
+        }, function () {
+            console.log('here')
+            locket._merge(step())
         })
     })
 })

@@ -115,6 +115,10 @@ function Locket (location) {
     if (!(this instanceof Locket)) return new Locket(location)
     AbstractLevelDOWN.call(this, location)
     this._merging = sequester.createLock()
+    this._primaryLeafSize = 1024
+    this._primaryBranchSize = 1024
+    this._stageLeafSize = 1024
+    this._stageBranchSize = 1024
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
@@ -180,14 +184,14 @@ Locket.prototype._open = cadence(function (step, options) {
             comparator: mvcc.revise.comparator(pair.compare),
             serialize: pair.serializer,
             deserialize: pair.deserializer,
-            leafSize: 1024,
-            branchSize: 1024
+            leafSize: this._primaryLeafSize,
+            branchSize: this._primaryBranchSize
         })
         if (!exists) this._primary.create(step())
         this._transactions = new Strata({
             directory: path.join(this.location, 'transactions'),
-            leafSize: 1024,
-            branchSize: 1024
+            leafSize: this._stageLeafSize,
+            branchSize: this._stageBranchSize
         })
         if (!exists) this._transactions.create(step())
     }, function () {
