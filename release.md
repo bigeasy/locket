@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Splice to 0.0.5. #155.
  * Test get using buffer. #154.
  * Test reopening and merging previous stages. #152.
  * Use pre-tree flush in stages. #151.
