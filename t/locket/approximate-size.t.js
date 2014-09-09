@@ -32,7 +32,7 @@ require('proof')(2, function (step, assert) {
         }, function (size) {
             assert(size, 183, 'all')
         }, function () {
-            locket.approximateSize('a', 'b', step())
+            locket.approximateSize('a', new Buffer('b'), step())
         }, function (size) {
             assert(size, 122, 'some')
         }, function () {
