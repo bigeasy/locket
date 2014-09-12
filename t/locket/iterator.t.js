@@ -33,7 +33,7 @@ require('proof')(4, function (step, assert) {
                     iterator.next(step())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else step(null)
+                    else return [ step ]
                 })()
             }, function () {
                 assert(keys, [ 'a', 'b', 'c' ], 'left most to end')
@@ -53,7 +53,7 @@ require('proof')(4, function (step, assert) {
                         keys.push(key)
                         values.push(value)
                     } else {
-                        step(null)
+                        return [ step ]
                     }
                 })()
             }, function () {
@@ -69,7 +69,7 @@ require('proof')(4, function (step, assert) {
                     iterator.next(step())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else step(null)
+                    else return [ step ]
                 })()
             }, function () {
                 assert(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
