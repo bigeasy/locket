@@ -234,7 +234,7 @@ Locket.prototype._open = cadence(function (step, options) {
                     this._versions[version] = true
                     this._version = Math.max(this._version, version)
                 } else {
-                    step(null)
+                    return [ step ]
                 }
             })()
         })
@@ -257,9 +257,9 @@ Locket.prototype._get = cadence(function (step, key, options) {
                 if (!options.asBuffer) {
                     value = pair.encoder.value([ options, this._options ]).decode(value)
                 }
-                step(null, value)
+                return [ step, value ]
             } else {
-                step(new Error('NotFoundError: not found'))
+                throw new Error('NotFoundError: not found')
             }
         })
     })
@@ -421,7 +421,7 @@ Locket.prototype._approximateSize = cadence(function (step, from, to) {
                 iterator.next(step())
             }, function (record, key, size) {
                 if (record) approximateSize += size
-                else step(null, approximateSize)
+                else return [ step, approximateSize ]
             })()
         })
     })
