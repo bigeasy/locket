@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Amalgamate to 0.0.7. #167.
  * Upgrade Splice to 0.0.7. #166.
  * Upgrade Strata to 0.0.26. #165.
  * Upgrade Designate to 0.0.7. #164.
