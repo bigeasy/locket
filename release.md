@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Strata to 0.0.26. #165.
  * Upgrade Designate to 0.0.7. #164.
  * Upgrade Skip to 0.0.9. #163.
  * Upgrade Riffle to 0.0.8. #162.
