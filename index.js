@@ -280,7 +280,7 @@ Locket.prototype._iterator = function (options) {
 Locket.prototype._merge = cadence(function (step) {
     var merged = {}
     step(function () {
-        this._merging.exclude(step(step, [function () { this._merging.unlock() }]))
+        this._merging.exclude(step(step)([function () { this._merging.unlock() }]))
     }, function () {
         var stages = this._stages.filter(function (stage) {
             return (stage.status == 'idle' && stage.count > 1024 * 0.74)
