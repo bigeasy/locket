@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Proof to 0.0.48. #160.
  * Upgrade Proof to 0.0.47. #158.
  * Test passing `Buffer` to `approximateSize`. #157.
  * Test repeated merges. #156.
