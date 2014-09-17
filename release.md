@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Upgrade Skip to 0.0.9. #163.
  * Upgrade Riffle to 0.0.8. #162.
  * Upgrade Cadence to 0.0.41. #161.
  * Upgrade Proof to 0.0.48. #160.
