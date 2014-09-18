@@ -7,6 +7,7 @@ other databases.
 
 ### Issue by Issue
 
+ * Fix AbstractLevelDOWN stack overflow. #169.
  * Remove Turnstile. #168.
  * Upgrade Amalgamate to 0.0.7. #167.
  * Upgrade Splice to 0.0.7. #166.
