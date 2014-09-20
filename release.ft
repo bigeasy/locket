@@ -1,0 +1,7 @@
+### Upgrade Cadence
+
+Candence now uses `null` to indicate an event callback. Upgrading Cadence causes a ripple of upgrades through all of the modules that support Locket thanks to the many small modules paradigm, which translates to many tedious updates.
+
+# Issue by Issue
+
+ * Upgrade Dilute to 0.0.6. #170.
