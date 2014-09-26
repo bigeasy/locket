@@ -14,6 +14,8 @@ function pseudo (max) {
     }
     return random
 }
+// ^^^ see:
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 
 locket.open({createIfMissing: true}, function () {
     var entries = []
@@ -23,8 +25,11 @@ locket.open({createIfMissing: true}, function () {
     for (var i=0; i<1024; i++) { 
         val = pseudo(max)
         sha = crypto.createHash('sha1')
-        sha.update(new Buffer(val))
-        type = (val % 2 == 0)
+        sha.update(new Buffer(val)) // <- wrong invocation, that creates a
+                                    //      buffer of length `val`.
+        type = (val % 2 == 0)       // <- need a new random number or you will
+                                    //      only ever insert odds and delete
+                                    //      evens, or whatever.
         entries.push({
             type: type,
             key: sha.digest('binary'),
