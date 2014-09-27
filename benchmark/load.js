@@ -4,17 +4,16 @@ var Locket = require('../')
 var cadence = require('cadence')
 var path = require('path')
 var crypto = require('crypto')
+var seedrandom = require('seedrandom')
 
 
 function pseudo (max) {
-    var random = Math.random()
+    var random = seedrandom()()
     while (random > max) {
-        random = Math.random()
+        random = seedrandom()()
     }
     return random
 }
-// ^^^ see:
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 
 cadence(function (step) {
     var locket = new Locket(path.join(path.join(__dirname, '../tmp'), 'put'))
@@ -23,27 +22,30 @@ cadence(function (step) {
     }, function () {
         var entries = []
         var max = 10000
-        var type, sha, val
+        var type, sha, entry, val = seedrandom(0)()
         for (var i = 0; i < 1024; i++) {
-            val = pseudo(max)
+            type = (pseudo(2) % 2 == 0)
             sha = crypto.createHash('sha1')
-            sha.update(new Buffer(val)) // <- wrong invocation, that creates a
-                                        //      buffer of length `val`.
-            type = (val % 2 == 0)       // <- need a new random number or you will
-                                        //      only ever insert odds and delete
-                                        //      evens, or whatever.
+            entry = new Buffer(4)
+            entry.writeFloatLE(val, 0)
+            sha.update(entry)
+
             entries.push({
                 type: type,
                 key: sha.digest('binary'),
                 value: val
             })
+
+            val = pseudo(max)
         }
         locket.batch(entries, step())
     }, function () {
         sha = crypto.createHash('sha1')
-        sha.update(new Buffer(val))
-        locket.get(sha.digest('binary'), function () {
-            console.log(arguments)
+        first_key = new Buffer(4)
+        first_key.writeFloatLE(seedrandom(0)(), 0)
+        sha.update(first_key)
+        locket.get(sha.digest('binary'), function (_, value) {
+            console.log(value)
         })
         // ^^^ no idea what's going on here.
     })
