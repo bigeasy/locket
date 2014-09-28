@@ -7,13 +7,12 @@ var crypto = require('crypto')
 var seedrandom = require('seedrandom')
 
 
-function pseudo (max) {
-    var random = seedrandom()()
-    while (random > max) {
-        random = seedrandom()()
+var random = (function () {
+    var random = seedrandom(0)
+    return function (max) {
+        return Math.floor(random() * max)
     }
-    return random
-}
+})()
 
 cadence(function (step) {
     var locket = new Locket(path.join(path.join(__dirname, '../tmp'), 'put'))
@@ -21,34 +20,22 @@ cadence(function (step) {
         locket.open({ createIfMissing: true }, step())
     }, function () {
         var entries = []
-        var max = 10000
-        var type, sha, entry, val = seedrandom(0)()
+        var type, sha, buffer, value
         for (var i = 0; i < 1024; i++) {
-            type = (pseudo(2) % 2 == 0)
+            var value = random(10000)
             sha = crypto.createHash('sha1')
-            entry = new Buffer(4)
-            entry.writeFloatLE(val, 0)
-            sha.update(entry)
-
+            buffer = new Buffer(4)
+            buffer.writeUInt32BE(value, 0)
+            sha.update(buffer)
             entries.push({
-                type: type,
                 key: sha.digest('binary'),
-                value: val
+                value: value,
+                type: !! random(1)
             })
-
-            val = pseudo(max)
         }
+        console.log('here', entries.length)
         locket.batch(entries, step())
-    }, function () {
-        sha = crypto.createHash('sha1')
-        first_key = new Buffer(4)
-        first_key.writeFloatLE(seedrandom(0)(), 0)
-        sha.update(first_key)
-        locket.get(sha.digest('binary'), function (_, value) {
-            console.log(value)
-        })
-        // ^^^ no idea what's going on here.
-    })
+    })(7)
 })(function (error) {
     if (error) throw error
 })
