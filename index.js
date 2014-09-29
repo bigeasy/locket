@@ -169,10 +169,13 @@ Locket.prototype._open = cadence(function (step, options) {
         var subdirs = [ 'archive', 'primary', 'stages', 'transactions' ]
         if (exists) {
           files = files.filter(function (file) { return file[0] != '.' }).sort()
-          if (!subdirs.every(function (file) { return files.shift() == file }) || files.length) {
+          if (!files.length) {
+              exists = false
+          } else if (!subdirs.every(function (file) { return files.shift() == file }) || files.length) {
               throw new Error('not a Locket datastore')
           }
-        } else {
+        }
+        if (!exists) {
           subdirs.forEach(step([], function (dir) {
               fs.mkdir(path.join(this.location, dir), step())
           }))
