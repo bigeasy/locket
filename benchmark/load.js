@@ -73,9 +73,6 @@ require('arguable/executable')(module, cadence(function (step, options) {
                     count++
                 })
                 .on('error', step(Error))
-                .on('close', function () {
-                    console.log('Stream closed')
-                })
                 .on('end', step(null))
         }, function () {
             console.log('count', count)
