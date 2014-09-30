@@ -31,34 +31,55 @@ var random = (function () {
 })()
 
 require('arguable/executable')(module, cadence(function (step, options) {
-    var file = path.join(__dirname, 'tmp', 'put')
+    var file = path.join(__dirname, 'tmp', 'put'), db, count = 0
+    var o = { createIfMissing: true }
+    if (!options.params.leveldown) {
+        o.db = require('..')
+    }
     step(function () {
         rimraf(file, step())
     }, function () {
         //mkdirp(file, step())
     }, function () {
-        var o = { createIfMissing: true }
-        if (!options.params.leveldown) {
-            o.db = require('..')
-        }
-        var locket = levelup(file, o)
+        levelup(file, o, step())
+    }, function (db) {
         step(function () {
-            var entries = []
-            var type, sha, buffer, value
-            for (var i = 0; i < 1024; i++) {
-                var value = random(10000)
-                sha = crypto.createHash('sha1')
-                buffer = new Buffer(4)
-                buffer.writeUInt32BE(value, 0)
-                sha.update(buffer)
-                entries.push({
-                    key: sha.digest('binary'),
-                    value: value,
-                    type: !! random(1)
+            step(function () {
+                var entries = []
+                var type, sha, buffer, value
+                for (var i = 0; i < 1024; i++) {
+                    var value = random(10000)
+                    sha = crypto.createHash('sha1')
+                    buffer = new Buffer(4)
+                    buffer.writeUInt32BE(value, 0)
+                    sha.update(buffer)
+                    entries.push({
+                        key: sha.digest(),
+                        value: buffer,
+                        type: !! random(2) ? 'put' : 'del'
+                    })
+                }
+                db.batch(entries, step())
+            })(7)
+        }, function () {
+            db.close(step())
+        })
+    }, function () {
+        levelup(file, o, step())
+    }, function (db) {
+        step(function () {
+            db.createReadStream()
+                .on('data', function (data) {
+                    count++
                 })
-            }
-            console.log('here', entries.length)
-            locket.batch(entries, step())
-        })(7)
+                .on('error', step(Error))
+                .on('close', function () {
+                    console.log('Stream closed')
+                })
+                .on('end', step(null))
+        }, function () {
+            console.log('count', count)
+            db.close(step())
+        })
     })
 }))
