@@ -58,7 +58,7 @@ function Stage (db, number, status) {
         deserialize: pair.deserializer,
         leafSize: this.leafSize,
         branchSize: this.branchSize,
-        writeStage: 'entry'
+        writeStage: 'leaf'
     })
 }
 
@@ -188,13 +188,15 @@ Locket.prototype._open = cadence(function (step, options) {
             serialize: pair.serializer,
             deserialize: pair.deserializer,
             leafSize: this._primaryLeafSize,
-            branchSize: this._primaryBranchSize
+            branchSize: this._primaryBranchSize,
+            writeStage: 'leaf'
         })
         if (!exists) this._primary.create(step())
         this._transactions = new Strata({
             directory: path.join(this.location, 'transactions'),
             leafSize: this._stageLeafSize,
-            branchSize: this._stageBranchSize
+            branchSize: this._stageBranchSize,
+            writeStage: 'leaf'
         })
         if (!exists) this._transactions.create(step())
     }, function () {
