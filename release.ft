@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Remove `require.t.js`. #191.
  * Use a `prove` named function in tests. #190.
  * Rename main module to `locket.js`. #189.
  * Upgrade Strata to 0.0.30. #177.
