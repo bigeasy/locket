@@ -16,6 +16,7 @@
                         "type": "MIT",
                         "url": "http://github.com/bigeasy/locket/raw/master/LICENSE"
     }],
+    "main":             "locket",
     "repository":
     {
                         "type": "git",
