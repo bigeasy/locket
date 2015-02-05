@@ -4,4 +4,5 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade Strata to 0.0.30. #177.
  * Upgrade Dilute to 0.0.6. #170.
