@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, prove)
+require('proof')(2, require('cadence')(prove))
 
 function prove (step, assert) {
   var Locket = require('../..')

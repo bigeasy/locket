@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(3, prove)
+require('proof')(3, require('cadence')(prove))
 
 function prove (step, assert) {
     var path = require('path')

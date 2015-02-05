@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, prove)
+require('proof')(2, require('cadence')(prove))
 
 function prove (step, assert) {
     var path = require('path')
@@ -33,7 +33,7 @@ function prove (step, assert) {
                     assert(record.value, '1', 'value')
                 })
             read.pipe(consume)
-            consume.once('finish', step(-1))
+            consume.once('finish', step(null))
         }, function () {
             locket.close(step())
         })
