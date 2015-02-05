@@ -20,6 +20,7 @@ var crypto = require('crypto')
 var seedrandom = require('seedrandom')
 var levelup = require('levelup')
 var rimraf = require('rimraf')
+
 var mkdirp = require('mkdirp')
 
 
@@ -30,21 +31,21 @@ var random = (function () {
     }
 })()
 
-require('arguable/executable')(module, cadence(function (step, options) {
+var runner = cadence(function (async, options) {
     var file = path.join(__dirname, 'tmp', 'put'), db, count = 0
     var o = { createIfMissing: true }
     if (!options.params.leveldown) {
         o.db = require('..')
     }
-    step(function () {
-        rimraf(file, step())
+    async(function () {
+        rimraf(file, async())
     }, function () {
-        //mkdirp(file, step())
+        //mkdirp(file, async())
     }, function () {
-        levelup(file, o, step())
+        levelup(file, o, async())
     }, function (db) {
-        step(function () {
-            step(function () {
+        async(function () {
+            async(function () {
                 var entries = []
                 var type, sha, buffer, value
                 for (var i = 0; i < 1024; i++) {
@@ -59,24 +60,31 @@ require('arguable/executable')(module, cadence(function (step, options) {
                         type: !! random(2) ? 'put' : 'del'
                     })
                 }
-                db.batch(entries, step())
+                db.batch(entries, async())
             })(7)
         }, function () {
-            db.close(step())
+            db.close(async())
         })
     }, function () {
-        levelup(file, o, step())
+        levelup(file, o, async())
     }, function (db) {
-        step(function () {
+        async(function () {
             db.createReadStream()
                 .on('data', function (data) {
                     count++
                 })
-                .on('error', step(Error))
-                .on('end', step(null))
+                .on('error', async(Error))
+                .on('end', async(null))
         }, function () {
             console.log('count', count)
-            db.close(step())
+            db.close(async())
         })
     })
+})
+
+require('arguable/executable')(module, cadence(function (async, options) {
+    function run () {
+        runner(options, function (error) { if (error) throw error })
+    }
+    run()
 }))
