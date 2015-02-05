@@ -2,7 +2,7 @@
 
 require('proof')(4, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -13,72 +13,72 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
             locket.batch([
               { type: 'put', key: 'a', value: 'able' },
               { type: 'put', key: 'b', value: 'baker' },
               { type: 'put', key: 'c', value: 'charlie' }
-            ], step())
+            ], async())
         }, function () {
             var keys = [], iterator = locket.iterator()
-            step(function () {
+            async(function () {
                 // todo: better way to break outer?
-                step(function () {
-                    iterator.next(step())
+                async(function () {
+                    iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ step ]
+                    else return [ async ]
                 })()
             }, function () {
                 assert(keys, [ 'a', 'b', 'c' ], 'left most to end')
-                iterator.end(step())
+                iterator.end(async())
             })
         }, function () {
             var keys = [], values = [], iterator = locket.iterator({
                 keyAsBuffer: false,
                 valueAsBuffer: false
             })
-            step(function () {
+            async(function () {
                 // todo: better way to break outer?
-                step(function () {
-                    iterator.next(step())
+                async(function () {
+                    iterator.next(async())
                 }, function (key, value) {
                     if (key && value) {
                         keys.push(key)
                         values.push(value)
                     } else {
-                        return [ step ]
+                        return [ async ]
                     }
                 })()
             }, function () {
                 assert(keys, [ 'a', 'b', 'c' ], 'keys not as buffer')
                 assert(values, [ 'able', 'baker', 'charlie' ], 'values not as buffer')
-                iterator.end(step())
+                iterator.end(async())
             })
         }, function () {
             var keys = [], iterator = locket.iterator({ reverse: true })
-            step(function () {
+            async(function () {
                 // todo: better way to break outer?
-                step(function () {
-                    iterator.next(step())
+                async(function () {
+                    iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ step ]
+                    else return [ async ]
                 })()
             }, function () {
                 assert(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
-                iterator.end(step())
+                iterator.end(async())
             })
         }, function () {
-            locket.close(step())
+            locket.close(async())
         })
     })
 }

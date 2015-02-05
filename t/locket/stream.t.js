@@ -2,7 +2,7 @@
 
 require('proof')(2, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -15,16 +15,16 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = levelup(location, { db: Locket })
-            locket.open(step())
+            locket.open(async())
         }, function () {
-            locket.put('a', 1, step())
+            locket.put('a', 1, async())
         }, function () {
             var read = locket.createReadStream(),
                 consume = concat(function(rows) {
@@ -33,9 +33,9 @@ function prove (step, assert) {
                     assert(record.value, '1', 'value')
                 })
             read.pipe(consume)
-            consume.once('finish', step(null))
+            consume.once('finish', async(null))
         }, function () {
-            locket.close(step())
+            locket.close(async())
         })
     })
 }

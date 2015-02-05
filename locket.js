@@ -62,13 +62,13 @@ function Stage (db, number, status) {
     })
 }
 
-Stage.prototype.create = cadence(function (step, number) {
-    step (function () {
-        mkdirp(path.join(this.location, 'stages', String(this.number)), step())
+Stage.prototype.create = cadence(function (async, number) {
+    async (function () {
+        mkdirp(path.join(this.location, 'stages', String(this.number)), async())
     }, function () {
-        this.tree.create(step())
+        this.tree.create(async())
     }, function () {
-        this.tree.open(step())
+        this.tree.open(async())
     })
 })
 
@@ -94,12 +94,12 @@ function Iterator (db, options) {
 }
 util.inherits(Iterator, AbstractIterator)
 
-Iterator.prototype._next = cadence(function (step) {
-    step(function () {
+Iterator.prototype._next = cadence(function (async) {
+    async(function () {
         if (this._iterator) return this._iterator
-        this._db._dilution(this._range, this._versions, step('_iterator'))
+        this._db._dilution(this._range, this._versions, async('_iterator'))
     }, function (iterator) {
-        iterator.next(step())
+        iterator.next(async())
     }, function (record, key) {
         if (record) {
             return [ this._decoders.key(record.key), this._decoders.value(record.value) ]
@@ -107,8 +107,8 @@ Iterator.prototype._next = cadence(function (step) {
     })
 })
 
-Iterator.prototype._end = cadence(function (step) {
-    this._iterator.unlock(step())
+Iterator.prototype._end = cadence(function (async) {
+    this._iterator.unlock(async())
 })
 
 function Locket (location) {
@@ -130,17 +130,17 @@ Locket.prototype._snapshot = function () {
     return versions
 }
 
-Locket.prototype._dilution = cadence(function (step, range, versions) {
-    step(function () {
-        step(function (stage) {
+Locket.prototype._dilution = cadence(function (async, range, versions) {
+    async(function () {
+        async(function (stage) {
             return mvcc.skip[range.direction](
-                stage.tree, pair.compare, versions, {}, range.key, step()
+                stage.tree, pair.compare, versions, {}, range.key, async()
             )
         })([], [ { tree: this._primary } ].concat(this._stages))
     }, function (iterators) {
         mvcc.designate[range.direction](pair.compare, function (record) {
             return record.operation == 'del'
-        }, iterators, step())
+        }, iterators, async())
     }, function (iterator) {
         return mvcc.dilute(iterator, function (key) {
             return range.valid(key.value)
@@ -148,16 +148,16 @@ Locket.prototype._dilution = cadence(function (step, range, versions) {
     })
 })
 
-Locket.prototype._open = cadence(function (step, options) {
+Locket.prototype._open = cadence(function (async, options) {
     var exists = true
     this._options = options
-    step(function () {
-        var readdir = step([function () {
-            fs.readdir(this.location, step())
+    async(function () {
+        var readdir = async([function () {
+            fs.readdir(this.location, async())
         }, /^ENOENT$/, function (_, error) {
             if (options.createIfMissing == null || options.createIfMissing) {
                 exists = false
-                mkdirp(this.location, step(readdir, 0))
+                mkdirp(this.location, async(readdir, 0))
             } else {
                 throw new Error('does not exist')
             }
@@ -176,8 +176,8 @@ Locket.prototype._open = cadence(function (step, options) {
           }
         }
         if (!exists) {
-          subdirs.forEach(step([], function (dir) {
-              fs.mkdir(path.join(this.location, dir), step())
+          subdirs.forEach(async([], function (dir) {
+              fs.mkdir(path.join(this.location, dir), async())
           }))
         }
     }, function () {
@@ -191,29 +191,29 @@ Locket.prototype._open = cadence(function (step, options) {
             branchSize: this._primaryBranchSize,
             writeStage: 'leaf'
         })
-        if (!exists) this._primary.create(step())
+        if (!exists) this._primary.create(async())
         this._transactions = new Strata({
             directory: path.join(this.location, 'transactions'),
             leafSize: this._stageLeafSize,
             branchSize: this._stageBranchSize,
             writeStage: 'leaf'
         })
-        if (!exists) this._transactions.create(step())
+        if (!exists) this._transactions.create(async())
     }, function () {
-        this._primary.open(step())
-        this._transactions.open(step())
+        this._primary.open(async())
+        this._transactions.open(async())
     }, function () {
-        fs.readdir(path.join(this.location, 'stages'), step())
+        fs.readdir(path.join(this.location, 'stages'), async())
     }, function (files) {
         files = files.filter(function (file) { return file[0] != '.' })
                      .map(function (file) { return +file })
                      .sort(function (a, b) { return a - b }).reverse()
         this._maxStageNumber = Math.max.apply(Math, files.concat(0))
-        step(function () {
-            files.forEach(step([], function (number) {
+        async(function () {
+            files.forEach(async([], function (number) {
                 var stage = new Stage(this, number, 'full')
-                step(function () {
-                    stage.tree.open(step())
+                async(function () {
+                    stage.tree.open(async())
                 }, function () {
                     return stage
                 })
@@ -227,42 +227,42 @@ Locket.prototype._open = cadence(function (step, options) {
         this._mergeRequests = 0
         this._versions = { 0: true }
         this._version = 1
-        mvcc.riffle.forward(this._transactions, step())
+        mvcc.riffle.forward(this._transactions, async())
     }, function (transactions) {
-        step([function () {
-            transactions.unlock(step())
+        async([function () {
+            transactions.unlock(async())
         }], function () {
-            step(function () {
-                transactions.next(step())
+            async(function () {
+                transactions.next(async())
             }, function (version) {
                 if(version) {
                     this._versions[version] = true
                     this._version = Math.max(this._version, version)
                 } else {
-                    return [ step ]
+                    return [ async ]
                 }
             })()
         })
     })
 })
 
-Locket.prototype._get = cadence(function (step, key, options) {
+Locket.prototype._get = cadence(function (async, key, options) {
     options = new Options(options, { asBuffer: true })
     if (!Buffer.isBuffer(key)) {
         key = pair.encoder.key([ options, this._options ]).encode(key)
     }
     var iterator = this._iterator({ start: key, limit: 1 })
-    step(function () {
-        iterator.next(step())
+    async(function () {
+        iterator.next(async())
     }, function ($key, value) {
-        step(function () {
-            iterator.end(step())
+        async(function () {
+            iterator.end(async())
         }, function () {
             if ($key && value && pair.compare($key, key) == 0) {
                 if (!options.asBuffer) {
                     value = pair.encoder.value([ options, this._options ]).decode(value)
                 }
-                return [ step, value ]
+                return [ async, value ]
             } else {
                 throw new Error('NotFoundError: not found')
             }
@@ -282,10 +282,10 @@ Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
-Locket.prototype._merge = cadence(function (step) {
+Locket.prototype._merge = cadence(function (async) {
     var merged = {}
-    step(function () {
-        this._merging.exclude(step(step)([function () { this._merging.unlock() }]))
+    async(function () {
+        this._merging.exclude(async(async)([function () { this._merging.unlock() }]))
     }, function () {
         var stages = this._stages.filter(function (stage) {
             return (stage.status == 'idle' && stage.count > 1024 * 0.74)
@@ -294,25 +294,25 @@ Locket.prototype._merge = cadence(function (step) {
         stages.forEach(function (stage) {
             stage.status = 'merge'
         })
-        step(function () {
+        async(function () {
             stages.map(function (stage) {
                 return stage.tree
-            }).forEach(step([], function (tree) {
-                mvcc.skip.forward(tree, pair.compare, this._versions, merged, this._start, step())
+            }).forEach(async([], function (tree) {
+                mvcc.skip.forward(tree, pair.compare, this._versions, merged, this._start, async())
             }))
         }, function (iterators) {
             mvcc.designate.forward(pair.compare, function (record) {
                 return false
-            }, iterators, step())
+            }, iterators, async())
         }, function (iterator) {
             // todo: amalgamate is going to set the version, which is wrong, it
             // should assert the version, and the version should be correct.
-            step(function () {
+            async(function () {
                 mvcc.amalgamate(function (record) {
                     return record.operation == 'del'
-                }, 0, this._primary, iterator, step())
+                }, 0, this._primary, iterator, async())
             }, function () {
-                iterator.unlock(step())
+                iterator.unlock(async())
             })
         }, function () {
             // no need to lock exclusive, anyone using these trees at the end
@@ -333,23 +333,23 @@ Locket.prototype._merge = cadence(function (step) {
             // in the tree. Would you rather I write out version numbers as file
             // names in a directory? Atomic according to everything else you
             // believe.
-            mvcc.splice(function () { return 'delete' }, this._transactions, iterator, step())
+            mvcc.splice(function () { return 'delete' }, this._transactions, iterator, async())
         }, function () {
-            var loop = step(function () {
-                this._primary.balance(step())
+            var loop = async(function () {
+                this._primary.balance(async())
             }, function () {
                 if (this._primary.balanced) return loop
             })()
         }, function () {
             this._stages.filter(function (stage) {
                 return stage.status == 'merge'
-            }).forEach(step([], function (stage) {
+            }).forEach(async([], function (stage) {
                 var from = path.join(this.location, 'stages', String(stage.number))
                 var filename = tz(Date.now(), '%F-%H-%M-%S-%3N-' + stage.number)
                 var to = path.join(this.location, 'archive', filename)
                 // todo: note that archive and stage need to be on same file system.
-                step(function () {
-                    fs.rename(from, to, step())
+                async(function () {
+                    fs.rename(from, to, async())
                 }, function () {
                     // todo: rimraf the archive file if we're not preserving the archive
                 })
@@ -362,9 +362,9 @@ Locket.prototype._merge = cadence(function (step) {
     })
 })
 
-Locket.prototype._batch = cadence(function (step, array, options) {
+Locket.prototype._batch = cadence(function (async, array, options) {
     var version = ++this._version
-    step(function () {
+    async(function () {
         var stage = this._stages.filter(function (stage) {
             return stage.status == 'idle'
         }).pop();
@@ -372,15 +372,15 @@ Locket.prototype._batch = cadence(function (step, array, options) {
         stage = new Stage(this, ++this._maxStageNumber, 'active')
         this._stages.unshift(stage)
         // todo: can I both return and wait?
-        // create.stage(step())
+        // create.stage(async())
         // return stage
-        step(function () {
-            stage.create(step())
+        async(function () {
+            stage.create(async())
         }, function () {
             return stage
         })
     }, function (stage) {
-        step(function () {
+        async(function () {
             stage.status = 'active'
             stage.count += array.length
             // Array does not need to be sorted because it is being inserted into a
@@ -393,15 +393,15 @@ Locket.prototype._batch = cadence(function (step, array, options) {
             })
             mvcc.amalgamate(function () {
                 return false
-            }, version, stage.tree, batch, step())
+            }, version, stage.tree, batch, async())
         }, function () {
-            step(function () {
-                this._transactions.mutator(version, step())
+            async(function () {
+                this._transactions.mutator(version, async())
             }, function (cursor) {
-                step(function () {
-                    cursor.insert(version, version, ~ cursor.index, step())
+                async(function () {
+                    cursor.insert(version, version, ~ cursor.index, async())
                 }, function () {
-                    cursor.unlock(step())
+                    cursor.unlock(async())
                 })
             })
         }, function () {
@@ -411,31 +411,31 @@ Locket.prototype._batch = cadence(function (step, array, options) {
     })
 })
 
-Locket.prototype._approximateSize = cadence(function (step, from, to) {
-    step(function () {
+Locket.prototype._approximateSize = cadence(function (async, from, to) {
+    async(function () {
         var range = constrain(pair.compare, function (key) {
             return Buffer.isBuffer(key) ? key : pair.encoder.key([]).encode(key)
         }, { gte: from, lte: to })
-        this._dilution(range, this._snapshot(), step())
+        this._dilution(range, this._snapshot(), async())
     }, function (iterator) {
         var approximateSize = 0
-        step([function () {
-            iterator.unlock(step())
+        async([function () {
+            iterator.unlock(async())
         }], function () {
-            step(function () {
-                iterator.next(step())
+            async(function () {
+                iterator.next(async())
             }, function (record, key, size) {
                 if (record) approximateSize += size
-                else return [ step, approximateSize ]
+                else return [ async, approximateSize ]
             })()
         })
     })
 })
 
-Locket.prototype._close = cadence(function (step, operations) {
-    if (this._isOpened) step(function () {
-        step(function (tree) {
-            tree.close(step())
+Locket.prototype._close = cadence(function (async, operations) {
+    if (this._isOpened) async(function () {
+        async(function (tree) {
+            tree.close(async())
         })([ this._primary, this._transactions ].concat(this._stages.map(function (stage) {
             return stage.tree
         })))

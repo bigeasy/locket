@@ -2,7 +2,7 @@
 
 require('proof')(3, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -14,35 +14,35 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = levelup(location, { db: Locket })
-            locket.open(step())
+            locket.open(async())
         }, [function () {
-            locket.get('a', step())
+            locket.get('a', async())
         }, function (_, error) {
             assert(error.status, 404, 'get empty')
         }])
     }, function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = levelup(location, { db: Locket })
-            locket.open(step())
+            locket.open(async())
         }, function () {
-            locket.put('b', JSON.stringify({ value: 1 }), step())
+            locket.put('b', JSON.stringify({ value: 1 }), async())
         }, [function () {
-            locket.get('a', step())
+            locket.get('a', async())
         }, function (_, error) {
             assert(error.status, 404, 'not found')
         }], function () {
-            locket.get(new Buffer('b'), step())
+            locket.get(new Buffer('b'), async())
         }, function (value) {
             assert(JSON.parse(value), { value: 1 }, 'got')
         })

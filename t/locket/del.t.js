@@ -2,7 +2,7 @@
 
 require('proof')(1, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -13,20 +13,20 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            locket.put('a', JSON.stringify({ value: 1 }), step())
+            locket.put('a', JSON.stringify({ value: 1 }), async())
         }, function () {
-            locket.del('a', step())
+            locket.del('a', async())
         }, [function () {
-            locket.get('a', step())
+            locket.get('a', async())
         }, function (_, error) {
             assert(error.message, 'NotFoundError: not found', 'not found')
         }])

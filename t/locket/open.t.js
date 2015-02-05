@@ -2,7 +2,7 @@
 
 require('proof')(7, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
     var tmp = path.join(__dirname, '../tmp')
@@ -10,71 +10,71 @@ function prove (step, assert) {
     var Locket = require('../..')
     var cadence = require('cadence')
 
-    step(function () {
+    async(function () {
         var invalid = path.join(tmp, 'invalid')
         var locket
-        step(function () {
-            rimraf(tmp, step())
+        async(function () {
+            rimraf(tmp, async())
         }, [function () {
             locket = new Locket(invalid)
-            locket.open({ createIfMissing: false }, step())
+            locket.open({ createIfMissing: false }, async())
         }, function (_, error) {
           assert(error.message, 'does not exist')
         }])
     }, function () {
         var locket
-        step(function () {
-            rimraf(tmp, step())
+        async(function () {
+            rimraf(tmp, async())
         }, [function () {
             locket = new Locket(__dirname)
-            locket.open(step())
+            locket.open(async())
         }, function (_, error) {
           assert(error.message, 'not a Locket datastore')
         }])
     }, function () {
         var empty = path.join(tmp, 'empty')
         var locket
-        step(function () {
-            rimraf(tmp, step())
+        async(function () {
+            rimraf(tmp, async())
         }, function () {
             locket = new Locket(empty)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            fs.readdir(empty, step())
+            fs.readdir(empty, async())
         }, function (listing) {
             assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'created')
-            fs.readdir(path.join(empty, 'stages'), step())
+            fs.readdir(path.join(empty, 'stages'), async())
         }, function (listing) {
             assert(listing.sort(), [], 'stages created')
         }, function () {
-            locket.close(step())
+            locket.close(async())
         })
     }, function () {
         var existing = path.join(tmp, 'empty')
         var locket
-        step([function () {
+        async([function () {
             locket = new Locket(existing)
-            locket.open({ createIfMissing: false, errorIfExists: true }, step())
+            locket.open({ createIfMissing: false, errorIfExists: true }, async())
         }, function (_, error) {
             assert(error.message, 'Locket database already exists', 'errorIfExists')
         }])
     }, function () {
         var empty = path.join(tmp, 'empty')
         var locket
-        step(function () {
+        async(function () {
             locket = new Locket(empty)
-            locket.open({}, step())
+            locket.open({}, async())
         }, function () {
-            fs.readdir(empty, step())
+            fs.readdir(empty, async())
         }, function (listing) {
             assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'reopened')
-            fs.readdir(path.join(empty, 'stages'), step())
+            fs.readdir(path.join(empty, 'stages'), async())
         }, function (listing) {
             assert(listing.sort(), [], 'stages reopened')
         }, function () {
-            locket.close(step())
+            locket.close(async())
         }, function () {
-            locket.close(step()) // test double close
+            locket.close(async()) // test double close
         })
     })
 }

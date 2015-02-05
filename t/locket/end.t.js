@@ -2,7 +2,7 @@
 
 require('proof')(1, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -15,16 +15,16 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            locket.put('ÿsÿ01', 'hello', step())
+            locket.put('ÿsÿ01', 'hello', async())
         }, function () {
 
             // these are a copy of what levelup passes to the
@@ -48,14 +48,14 @@ function prove (step, assert) {
             }
 
             var iterator = locket.iterator(iteratorOptions)
-            step(function () {
-                iterator.next(step())
+            async(function () {
+                iterator.next(async())
             }, function(key, val) {
                 assert(key == null && val == null, 'nothing')
-                iterator.end(step())
+                iterator.end(async())
             })
         }, function () {
-            locket.close(step())
+            locket.close(async())
         })
     })
 }

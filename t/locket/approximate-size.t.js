@@ -2,7 +2,7 @@
 
 require('proof')(2, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -13,32 +13,32 @@ function prove (step, assert) {
 
     var tmp = path.join(__dirname, '../tmp')
 
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            locket.batch([], step())
+            locket.batch([], async())
         }, function () {
             locket.batch([
               { type: 'put', key: 'a', value: '1' },
               { type: 'put', key: 'b', value: '2' },
               { type: 'put', key: 'c', value: '3' }
-            ], step())
+            ], async())
         }, function () {
-            locket.approximateSize('a', 'c', step())
+            locket.approximateSize('a', 'c', async())
         }, function (size) {
             assert(size, 183, 'all')
         }, function () {
-            locket.approximateSize('a', new Buffer('b'), step())
+            locket.approximateSize('a', new Buffer('b'), async())
         }, function (size) {
             assert(size, 122, 'some')
         }, function () {
-            locket.close(step())
+            locket.close(async())
         })
     })
 }

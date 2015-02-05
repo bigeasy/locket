@@ -2,7 +2,7 @@
 
 require('proof')(3, require('cadence')(prove))
 
-function prove (step, assert) {
+function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -14,31 +14,31 @@ function prove (step, assert) {
     var tmp = path.join(__dirname, '../tmp')
 
 //    Error.stackTraceLimit = Infinity
-    step(function () {
+    async(function () {
         var location = path.join(tmp, 'put')
         var locket
-        step(function () {
-            rimraf(location, step())
+        async(function () {
+            rimraf(location, async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            locket.batch([], step())
+            locket.batch([], async())
         }, function () {
             for (var i = 0; i < 3; i++) {
-                locket.put(i, JSON.stringify({ value: i }), step())
+                locket.put(i, JSON.stringify({ value: i }), async())
             }
         }, function () {
-            locket.close(step())
+            locket.close(async())
         }, function () {
             locket = new Locket(location)
-            locket.open({ createIfMissing: true }, step())
+            locket.open({ createIfMissing: true }, async())
         }, function () {
-            locket._merge(step())
+            locket._merge(async())
         }, function () {
-            locket.get(0, step())
-            locket.get(1, step())
-            locket.get(2, step())
+            locket.get(0, async())
+            locket.get(1, async())
+            locket.get(2, async())
         }, function (a, b, c) {
             assert(JSON.parse(a), { value: 0 }, 'merged a')
             assert(JSON.parse(b), { value: 1 }, 'merged b')
