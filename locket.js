@@ -390,9 +390,6 @@ Locket.prototype._batch = redux(function (async, array, options) {
         if (stage) return stage
         stage = new Stage(this, ++this._maxStageNumber, 'active')
         this._stages.unshift(stage)
-        // todo: can I both return and wait?
-        // create.stage(async())
-        // return stage
         async(function () {
             stage.create(async())
         }, function () {
