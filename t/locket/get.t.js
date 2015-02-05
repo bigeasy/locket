@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(3, function (step, assert) {
+require('proof')(3, prove)
+
+function prove (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -45,4 +47,4 @@ require('proof')(3, function (step, assert) {
             assert(JSON.parse(value), { value: 1 }, 'got')
         })
     })
-})
+}

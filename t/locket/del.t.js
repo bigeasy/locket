@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (step, assert) {
+require('proof')(1, prove)
+
+function prove (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -29,4 +31,4 @@ require('proof')(1, function (step, assert) {
             assert(error.message, 'NotFoundError: not found', 'not found')
         }])
     })
-})
+}

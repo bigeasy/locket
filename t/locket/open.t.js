@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(7, function (step, assert) {
+require('proof')(7, prove)
+
+function prove (step, assert) {
     var path = require('path')
     var fs = require('fs')
     var tmp = path.join(__dirname, '../tmp')
@@ -75,4 +77,4 @@ require('proof')(7, function (step, assert) {
             locket.close(step()) // test double close
         })
     })
-})
+}

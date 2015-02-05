@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, assert) {
+require('proof')(2, prove)
+
+function prove (step, assert) {
   var Locket = require('../..')
   var locket
 
@@ -16,4 +18,4 @@ require('proof')(2, function (step, assert) {
   locket = Locket(path.join('t', 'tmp'))
 
   assert(locket instanceof AbstractLevelDOWN, 'is a leveldown implementation')
-})
+}

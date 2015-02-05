@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(2, function (step, assert) {
+require('proof')(2, prove)
+
+function prove (step, assert) {
     var path = require('path')
     var fs = require('fs')
 
@@ -36,4 +38,4 @@ require('proof')(2, function (step, assert) {
             locket.close(step())
         })
     })
-})
+}
