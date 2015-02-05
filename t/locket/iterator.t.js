@@ -30,12 +30,11 @@ function prove (async, assert) {
         }, function () {
             var keys = [], iterator = locket.iterator()
             async(function () {
-                // todo: better way to break outer?
-                async(function () {
+                var loop = async(function () {
                     iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ async ]
+                    else return [ loop ]
                 })()
             }, function () {
                 assert(keys, [ 'a', 'b', 'c' ], 'left most to end')
@@ -47,15 +46,14 @@ function prove (async, assert) {
                 valueAsBuffer: false
             })
             async(function () {
-                // todo: better way to break outer?
-                async(function () {
+                var loop = async(function () {
                     iterator.next(async())
                 }, function (key, value) {
                     if (key && value) {
                         keys.push(key)
                         values.push(value)
                     } else {
-                        return [ async ]
+                        return [ loop ]
                     }
                 })()
             }, function () {
@@ -66,12 +64,11 @@ function prove (async, assert) {
         }, function () {
             var keys = [], iterator = locket.iterator({ reverse: true })
             async(function () {
-                // todo: better way to break outer?
-                async(function () {
+                var loop = async(function () {
                     iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ async ]
+                    else return [ loop ]
                 })()
             }, function () {
                 assert(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')

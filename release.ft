@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade to Cadence Redux. #195.
  * Rename `step` to `async`. #194.
  * Upgrade Proof to 0.0.51. #193.
  * Update license dates. #192.

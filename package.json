@@ -24,7 +24,7 @@
     },
     "dependencies":
     {
-                        "cadence":            "0.0.43",
+                        "cadence":            "0.0.51",
                         "abstract-leveldown": "~0.12",
                         "sequester":          "0.0.8",
                         "rimraf":             "~2.2",

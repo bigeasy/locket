@@ -14,7 +14,7 @@
 */
 
 var Locket = require('../')
-var cadence = require('cadence')
+var cadence = require('cadence/redux')
 var path = require('path')
 var crypto = require('crypto')
 var seedrandom = require('seedrandom')
@@ -23,6 +23,7 @@ var rimraf = require('rimraf')
 
 var mkdirp = require('mkdirp')
 
+require('cadence/ee')
 
 var random = (function () {
     var random = seedrandom(0)
@@ -45,7 +46,8 @@ var runner = cadence(function (async, options) {
         levelup(file, o, async())
     }, function (db) {
         async(function () {
-            async(function () {
+            var batch = 0, loop = async(function () {
+                if (batch++ == 7) return [ loop ]
                 var entries = []
                 var type, sha, buffer, value
                 for (var i = 0; i < 1024; i++) {
@@ -61,7 +63,7 @@ var runner = cadence(function (async, options) {
                     })
                 }
                 db.batch(entries, async())
-            })(7)
+            })()
         }, function () {
             db.close(async())
         })
@@ -69,12 +71,10 @@ var runner = cadence(function (async, options) {
         levelup(file, o, async())
     }, function (db) {
         async(function () {
-            db.createReadStream()
-                .on('data', function (data) {
-                    count++
-                })
-                .on('error', async(Error))
-                .on('end', async(null))
+            async.ee(db.createReadStream())
+                 .on('data', function (data) { count++ })
+                 .end('end')
+                 .error()
         }, function () {
             console.log('count', count)
             db.close(async())

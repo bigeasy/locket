@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(7, require('cadence')(prove))
+require('proof')(7, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -18,7 +18,7 @@ function prove (async, assert) {
         }, [function () {
             locket = new Locket(invalid)
             locket.open({ createIfMissing: false }, async())
-        }, function (_, error) {
+        }, function (error) {
           assert(error.message, 'does not exist')
         }])
     }, function () {
@@ -28,7 +28,7 @@ function prove (async, assert) {
         }, [function () {
             locket = new Locket(__dirname)
             locket.open(async())
-        }, function (_, error) {
+        }, function (error) {
           assert(error.message, 'not a Locket datastore')
         }])
     }, function () {
@@ -55,7 +55,7 @@ function prove (async, assert) {
         async([function () {
             locket = new Locket(existing)
             locket.open({ createIfMissing: false, errorIfExists: true }, async())
-        }, function (_, error) {
+        }, function (error) {
             assert(error.message, 'Locket database already exists', 'errorIfExists')
         }])
     }, function () {

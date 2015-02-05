@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, require('cadence')(prove))
+require('proof')(1, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -27,7 +27,7 @@ function prove (async, assert) {
             locket.del('a', async())
         }, [function () {
             locket.get('a', async())
-        }, function (_, error) {
+        }, function (error) {
             assert(error.message, 'NotFoundError: not found', 'not found')
         }])
     })

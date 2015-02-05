@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(3, require('cadence')(prove))
+require('proof')(3, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -24,7 +24,7 @@ function prove (async, assert) {
             locket.open(async())
         }, [function () {
             locket.get('a', async())
-        }, function (_, error) {
+        }, function (error) {
             assert(error.status, 404, 'get empty')
         }])
     }, function () {
@@ -39,7 +39,7 @@ function prove (async, assert) {
             locket.put('b', JSON.stringify({ value: 1 }), async())
         }, [function () {
             locket.get('a', async())
-        }, function (_, error) {
+        }, function (error) {
             assert(error.status, 404, 'not found')
         }], function () {
             locket.get(new Buffer('b'), async())

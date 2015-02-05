@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-require('proof')(2, require('cadence')(prove))
+require('cadence/ee')
+
+require('proof')(2, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -33,7 +35,7 @@ function prove (async, assert) {
                     assert(record.value, '1', 'value')
                 })
             read.pipe(consume)
-            consume.once('finish', async(null))
+            async.ee(consume).end('finish').error()
         }, function () {
             locket.close(async())
         })
