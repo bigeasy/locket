@@ -34,7 +34,7 @@ var random = (function () {
 
 var runner = cadence(function (async, options) {
     var start, insert, gather
-    var file = path.join(__dirname, 'tmp', 'put'), db, count = 0
+    var file = path.join(__dirname, 'tmp', 'put'), db, records = []
     var o = { createIfMissing: true }
     if (!options.params.leveldown) {
         o.db = require('..')
@@ -44,7 +44,7 @@ var runner = cadence(function (async, options) {
         var entries = []
         var type, sha, buffer, value
         for (var i = 0; i < 1024; i++) {
-            var value = random(10000)
+            var value = random(1024)
             sha = crypto.createHash('sha1')
             buffer = new Buffer(4)
             buffer.writeUInt32BE(value, 0)
@@ -81,7 +81,7 @@ var runner = cadence(function (async, options) {
     }, function (db) {
         async(function () {
             async.ee(db.createReadStream())
-                 .on('data', function (data) { count++ })
+                 .on('data', function (data) { records.push(data) })
                  .end('end')
                  .error()
         }, function () {
