@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(4, require('cadence')(prove))
+require('proof')(4, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
