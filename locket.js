@@ -11,8 +11,7 @@ var util = require('util')
 var fs   = require('fs')
 var path = require('path')
 
-var cadence = require('cadence')
-var redux = require('cadence/redux')
+var cadence = require('cadence/redux')
 var mkdirp  = require('mkdirp')
 
 var pair = require('pair')
@@ -65,7 +64,7 @@ function Stage (db, number, status) {
     })
 }
 
-Stage.prototype.create = redux(function (async, number) {
+Stage.prototype.create = cadence(function (async, number) {
     async (function () {
         mkdirp(path.join(this.location, 'stages', String(this.number)), async())
     }, function () {
@@ -97,7 +96,7 @@ function Iterator (db, options) {
 }
 util.inherits(Iterator, AbstractIterator)
 
-Iterator.prototype._next = redux(function (async) {
+Iterator.prototype._next = cadence(function (async) {
     async(function () {
         if (this._iterator) {
             return this._iterator
@@ -139,7 +138,7 @@ Locket.prototype._snapshot = function () {
     return versions
 }
 
-Locket.prototype._dilution = redux(function (async, range, versions) {
+Locket.prototype._dilution = cadence(function (async, range, versions) {
     async(function () {
         async.map(function (stage) {
             mvcc.skip[range.direction](stage.tree, pair.compare, versions, {}, range.key, async())
@@ -155,7 +154,7 @@ Locket.prototype._dilution = redux(function (async, range, versions) {
     })
 })
 
-Locket.prototype._open = redux(function (async, options) {
+Locket.prototype._open = cadence(function (async, options) {
     var exists = true
     this._options = options
     async(function () {
@@ -265,7 +264,7 @@ Locket.prototype._open = redux(function (async, options) {
     })
 })
 
-Locket.prototype._get = redux(function (async, key, options) {
+Locket.prototype._get = cadence(function (async, key, options) {
     options = new Options(options, { asBuffer: true })
     if (!Buffer.isBuffer(key)) {
         key = pair.encoder.key([ options, this._options ]).encode(key)
@@ -301,7 +300,7 @@ Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
-Locket.prototype._merge = redux(function (async) {
+Locket.prototype._merge = cadence(function (async) {
     var merged = {}
     async(function () {
         async (function () {
@@ -381,7 +380,7 @@ Locket.prototype._merge = redux(function (async) {
     })
 })
 
-Locket.prototype._batch = redux(function (async, array, options) {
+Locket.prototype._batch = cadence(function (async, array, options) {
     var version = ++this._version
     async(function () {
         var stage = this._stages.filter(function (stage) {
@@ -427,7 +426,7 @@ Locket.prototype._batch = redux(function (async, array, options) {
     })
 })
 
-Locket.prototype._approximateSize = redux(function (async, from, to) {
+Locket.prototype._approximateSize = cadence(function (async, from, to) {
     async(function () {
         var range = constrain(pair.compare, function (key) {
             return Buffer.isBuffer(key) ? key : pair.encoder.key([]).encode(key)
@@ -448,7 +447,7 @@ Locket.prototype._approximateSize = redux(function (async, from, to) {
     })
 })
 
-Locket.prototype._close = redux(function (async, operations) {
+Locket.prototype._close = cadence(function (async, operations) {
     if (this._isOpened) {
         async(function () {
             async.forEach(function (tree) {
