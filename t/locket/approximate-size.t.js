@@ -32,11 +32,11 @@ function prove (async, assert) {
         }, function () {
             locket.approximateSize('a', 'c', async())
         }, function (size) {
-            assert(size, 183, 'all')
+            assert(size, 42, 'all')
         }, function () {
             locket.approximateSize('a', new Buffer('b'), async())
         }, function (size) {
-            assert(size, 122, 'some')
+            assert(size, 28, 'some')
         }, function () {
             locket.close(async())
         })

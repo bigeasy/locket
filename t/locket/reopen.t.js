@@ -37,11 +37,13 @@ function prove (async, assert) {
             locket._merge(async())
         }, function () {
             locket.get(0, async())
-            locket.get(1, async())
-            locket.get(2, async())
-        }, function (a, b, c) {
+        }, function (a) {
             assert(JSON.parse(a), { value: 0 }, 'merged a')
+            locket.get(1, async())
+        }, function (b) {
             assert(JSON.parse(b), { value: 1 }, 'merged b')
+            locket.get(2, async())
+        }, function (c) {
             assert(JSON.parse(c), { value: 2 }, 'merged c')
         })
     })

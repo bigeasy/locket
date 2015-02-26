@@ -42,10 +42,10 @@ function prove (async, assert) {
         }, function () {
             fs.readdir(empty, async())
         }, function (listing) {
-            assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'created')
-            fs.readdir(path.join(empty, 'stages'), async())
+            assert(listing.sort(), [ 'archive', 'merging', 'primary', 'staging' ], 'created')
+            fs.readdir(path.join(empty, 'staging'), async())
         }, function (listing) {
-            assert(listing.sort(), [], 'stages created')
+            assert(listing.sort(), [ 'drafts', 'pages' ], 'staging created')
         }, function () {
             locket.close(async())
         })
@@ -67,10 +67,10 @@ function prove (async, assert) {
         }, function () {
             fs.readdir(empty, async())
         }, function (listing) {
-            assert(listing.sort(), [ 'archive', 'primary', 'stages', 'transactions' ], 'reopened')
-            fs.readdir(path.join(empty, 'stages'), async())
+            assert(listing.sort(), [ 'archive', 'merging', 'primary', 'staging' ], 'reopened')
+            fs.readdir(path.join(empty, 'staging'), async())
         }, function (listing) {
-            assert(listing.sort(), [], 'stages reopened')
+            assert(listing.sort(), [ 'drafts', 'pages' ], 'staging reopened')
         }, function () {
             locket.close(async())
         }, function () {
