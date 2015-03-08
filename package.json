@@ -30,7 +30,7 @@
                         "rimraf":             "~2.2",
                         "timezone":           "0.0.38",
                         "mkdirp":             "~0.3",
-                        "b-tree":             "0.0.37",
+                        "b-tree":             "0.0.39",
                         "constrain":          "0.0.12",
                         "revise":             "0.0.4",
                         "pair":               "0.0.6",
