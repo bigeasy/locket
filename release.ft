@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Remove Twiddle. #205.
  * Upgrade Designate to 0.0.16. #204.
  * Upgrade Dilute to 0.0.11. #203.
  * Upgrade Dilute to 0.0.10. #202.
