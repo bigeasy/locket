@@ -39,7 +39,7 @@
                         "homogenize":         "0.0.12",
                         "designate":          "0.0.16",
                         "dilute":             "0.0.11",
-                        "splice":             "0.0.13",
+                        "splice":             "0.0.19",
                         "amalgamate":         "0.0.9"
     },
     "devDependencies":

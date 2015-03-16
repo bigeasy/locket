@@ -174,15 +174,15 @@ Locket.prototype._snapshot = function () {
 // equal to, less than or equal to. We use a Dilute iterator to select out only
 // records that have not been deleted and that match the user's range critera.
 Locket.prototype._internalIterator = cadence(function (async, range, versions) {
+    var version = range.direction == 'forward' ? 0 : Math.MAX_VALUE
+    var key = range.key ? { value: range.key, version: version } : null
     async(function () {
-        mvcc.riffle[range.direction](this._primary, range.key, async())
+        mvcc.riffle[range.direction](this._primary, key, async())
     }, function (iterator) {
         var sheaf = this._staging.sheaf
         var advances = this._cursors.map(function (cursor) {
             if (range.key) {
-                var page = cursor._page
-                var version = range.direction == 'forward' ? 0 : Math.MAX_VALUE
-                var index = sheaf.find(cursor._page, { value: range.key, version: version }, 0)
+                var index = sheaf.find(cursor._page, key, 0)
                 if (index < 0) {
                     index = range.direction == 'forward' ? ~index : ~index - 1
                 } /* else if (!range.inclusive) {
@@ -362,9 +362,9 @@ Locket.prototype._iterator = function (options) {
 
 Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
-        splice(function (incoming, existing) {
-            return incoming.type == 'put' ? 'insert' : 'remove'
-        }, this._primary, advance.forward(this._cursors[1]._page.items), async())
+        mvcc.splice(function (incoming, existing) {
+            return incoming.record.operation == 'put' ? 'insert' : 'delete'
+        }, this._primary, mvcc.advance.forward(this._cursors[1]._page.items), async())
     }, function () {
         var merging = this._cursors.pop()
         async(function () {
@@ -400,27 +400,25 @@ Locket.prototype._rotate = cadence(function (async) {
             fs.rename(path.join(this.location, 'staging'),
                       path.join(this.location, 'merging'), async())
         }, function () {
-            this._openStrataWithCursor('merging', false, markVersion, async())
+            this._openStrataWithCursor('merging', false, this._versionMarker.bind(this), async())
         }, function (merging) {
             async(function () {
                 fs.mkdir(path.join(this.location, 'staging'), async())
             }, function () {
-                this._openStrataWithCursor('staging', true, markVersion, async())
+                this._openStrataWithCursor('staging', true, this._versionMarker.bind(this), async())
             }, function (staging) {
-                this._cursor = [ staging, merging ]
+                this._cursors = [ staging, merging ]
             })
         })
     })
 })
 
-Locket.prototype._merge = cadence(function () {})
-
-Locket.prototype.__merge = cadence(function (async) {
+Locket.prototype._merge = cadence(function (async) {
     var merged = {}
     async(function () {
         this._rotate(async())
     }, function () {
-        var merging = this._cursors.pop()
+        this._amalgamate(async())
     })
 })
 
