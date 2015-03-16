@@ -149,67 +149,55 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
-Locket.prototype._snapshot = function () {
-    var versions = {}
-    for (var key in this._versions) {
-        versions[key] = true
-    }
-    return versions
-}
-
-// Iteration of the database requires merging the results from the deep storage
-// b-tree and the one or two staging logs.
-//
-// We do this by creating a merged iterator across the b-tree and the logs. This
-// is an iteartor that takes one or more iterators and advances through. It will
-// advance each iterator and then when it is advanced, it returns the least
-// value of each of the three iterators (or greatest value if iteration is
-// reversed.)
-//
-// We then use the versioned iterator from the Designate module which will
-// select the key/value pair for a key that has the greatest committed version.
-//
-// Finally we need to respect the properties given a user when creating an
-// external iterator; start, stop, greater than, less than, greater than or
-// equal to, less than or equal to. We use a Dilute iterator to select out only
-// records that have not been deleted and that match the user's range critera.
-Locket.prototype._internalIterator = cadence(function (async, range, versions) {
-    var version = range.direction == 'forward' ? 0 : Math.MAX_VALUE
-    var key = range.key ? { value: range.key, version: version } : null
-    async(function () {
-        mvcc.riffle[range.direction](this._primary, key, async())
-    }, function (iterator) {
-        var sheaf = this._staging.sheaf
-        var advances = this._cursors.map(function (cursor) {
-            if (range.key) {
-                var index = sheaf.find(cursor._page, key, 0)
-                if (index < 0) {
-                    index = range.direction == 'forward' ? ~index : ~index - 1
-                } /* else if (!range.inclusive) {
-                    index += range.direction == 'forward' ? 1 : -1
-                } */
-                return mvcc.advance[range.direction](cursor._page.items, index)
-            } else {
-                return mvcc.advance[range.direction](cursor._page.items)
-            }
-        })
-        var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
-        var designate = mvcc.designate[range.direction](pair.compare, versions, {}, homogenize)
-        var dilute = mvcc.dilute(designate, function (item) {
-            if (item.record.operation == 'del') {
-                return -1
-            }
-            return range.valid(item.key.value)
-        })
-        return dilute
-    })
-})
-
 Locket.prototype._versionMarker = function (entry) {
     console.log(entry)
     this._versions[entry.header[0]] = !! entry.header[1]
     this._version = Math.max(+entry.header[0], this._version)
 }
+
+Locket.prototype._openStrataWithCursor = cadence(function (async, name, create, versionMarker) {
+    async(function () {
+        this._openStrata(name, create, versionMarker, async())
+    }, function (strata) {
+        if (strata) {
+            // force load of the one page to load transcations.
+            strata.iterator(strata.left, async())
+        } else {
+            return []
+        }
+    })
+})
+
+Locket.prototype._openStrata = cadence(function (async, name, create, versionMarker) {
+    var strata
+    async(function () {
+        fs.readdir(path.join(this.location, name), async())
+    }, function (files) {
+        if (files.length || create) {
+            async(function () {
+                strata = this['_' + name] = new Strata({
+                    directory: path.join(this.location, name),
+                    framer: framer,
+                    serializers: pair.serializers,
+                    deserializers: pair.deserializers,
+                    extractor: extractor,
+                    comparator: comparator,
+                    writeStage: 'leaf',
+                    userRecordHandler: versionMarker || null
+                })
+                if (files.length) {
+                    strata.open(async())
+                } else {
+                    strata.create(async())
+                }
+            }, function () {
+                return [ strata ]
+            })
+        } else {
+            return []
+        }
+    })
+})
 
 Locket.prototype._open = cadence(function (async, options) {
     var exists = true
@@ -280,49 +268,65 @@ Locket.prototype._open = cadence(function (async, options) {
     })
 })
 
-Locket.prototype._openStrataWithCursor = cadence(function (async, name, create, versionMarker) {
+Locket.prototype._snapshot = function () {
+    var versions = {}
+    for (var key in this._versions) {
+        versions[key] = true
+    }
+    return versions
+}
+
+// Iteration of the database requires merging the results from the deep storage
+// b-tree and the one or two staging logs.
+//
+// We do this by creating a merged iterator across the b-tree and the logs. This
+// is an iteartor that takes one or more iterators and advances through. It will
+// advance each iterator and then when it is advanced, it returns the least
+// value of each of the three iterators (or greatest value if iteration is
+// reversed.)
+//
+// We then use the versioned iterator from the Designate module which will
+// select the key/value pair for a key that has the greatest committed version.
+//
+// Finally we need to respect the properties given a user when creating an
+// external iterator; start, stop, greater than, less than, greater than or
+// equal to, less than or equal to. We use a Dilute iterator to select out only
+// records that have not been deleted and that match the user's range critera.
+Locket.prototype._internalIterator = cadence(function (async, range, versions) {
+    var version = range.direction == 'forward' ? 0 : Math.MAX_VALUE
+    var key = range.key ? { value: range.key, version: version } : null
     async(function () {
-        this._openStrata(name, create, versionMarker, async())
-    }, function (strata) {
-        if (strata) {
-            // force load of the one page to load transcations.
-            strata.iterator(strata.left, async())
-        } else {
-            return []
-        }
+        mvcc.riffle[range.direction](this._primary, key, async())
+    }, function (iterator) {
+        var sheaf = this._staging.sheaf
+        var advances = this._cursors.map(function (cursor) {
+            if (range.key) {
+                var index = sheaf.find(cursor._page, key, 0)
+                if (index < 0) {
+                    index = range.direction == 'forward' ? ~index : ~index - 1
+                } /* else if (!range.inclusive) {
+                    index += range.direction == 'forward' ? 1 : -1
+                } */
+                return mvcc.advance[range.direction](cursor._page.items, index)
+            } else {
+                return mvcc.advance[range.direction](cursor._page.items)
+            }
+        })
+        var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
+        var designate = mvcc.designate[range.direction](pair.compare, versions, {}, homogenize)
+        var dilute = mvcc.dilute(designate, function (item) {
+            if (item.record.operation == 'del') {
+                return -1
+            }
+            return range.valid(item.key.value)
+        })
+        return dilute
     })
 })
 
-Locket.prototype._openStrata = cadence(function (async, name, create, versionMarker) {
-    var strata
-    async(function () {
-        fs.readdir(path.join(this.location, name), async())
-    }, function (files) {
-        if (files.length || create) {
-            async(function () {
-                strata = this['_' + name] = new Strata({
-                    directory: path.join(this.location, name),
-                    framer: framer,
-                    serializers: pair.serializers,
-                    deserializers: pair.deserializers,
-                    extractor: extractor,
-                    comparator: comparator,
-                    writeStage: 'leaf',
-                    userRecordHandler: versionMarker || null
-                })
-                if (files.length) {
-                    strata.open(async())
-                } else {
-                    strata.create(async())
-                }
-            }, function () {
-                return [ strata ]
-            })
-        } else {
-            return []
-        }
-    })
-})
+Locket.prototype._iterator = function (options) {
+    return new Iterator(this, options)
+}
 
 Locket.prototype._get = cadence(function (async, key, options) {
     options = new Options(options, { asBuffer: true })
@@ -344,44 +348,6 @@ Locket.prototype._get = cadence(function (async, key, options) {
             } else {
                 throw new Error('NotFoundError: not found')
             }
-        })
-    })
-})
-
-Locket.prototype._put = function (key, value, options, callback) {
-    this._batch([{ type: 'put', key: key, value: value }], options, callback)
-}
-
-Locket.prototype._del = function (key, options, callback) {
-    this._batch([{ type: 'del', key: key }], options, callback)
-}
-
-Locket.prototype._iterator = function (options) {
-    return new Iterator(this, options)
-}
-
-Locket.prototype._amalgamate = cadence(function (async) {
-    async(function () {
-        mvcc.splice(function (incoming, existing) {
-            return incoming.record.operation == 'put' ? 'insert' : 'delete'
-        }, this._primary, mvcc.advance.forward(this._cursors[1]._page.items), async())
-    }, function () {
-        var merging = this._cursors.pop()
-        async(function () {
-            merging.unlock(async())
-        }, function () {
-            this._merging.close(async())
-        }, function () {
-            this._merging = null
-        })
-    }, function () {
-        var from = path.join(this.location, 'merging')
-        var to = path.join(this.location, 'archive', tz(Date.now(), '%F-%H-%M-%S-%3N'))
-        // todo: note that archive and stage need to be on same file system.
-        async(function () {
-            fs.rename(from, to, async())
-        }, function () {
-            // todo: rimraf the archive file if we're not preserving the archive
         })
     })
 })
@@ -413,6 +379,32 @@ Locket.prototype._rotate = cadence(function (async) {
     })
 })
 
+Locket.prototype._amalgamate = cadence(function (async) {
+    async(function () {
+        mvcc.splice(function (incoming, existing) {
+            return incoming.record.operation == 'put' ? 'insert' : 'delete'
+        }, this._primary, mvcc.advance.forward(this._cursors[1]._page.items), async())
+    }, function () {
+        var merging = this._cursors.pop()
+        async(function () {
+            merging.unlock(async())
+        }, function () {
+            this._merging.close(async())
+        }, function () {
+            this._merging = null
+        })
+    }, function () {
+        var from = path.join(this.location, 'merging')
+        var to = path.join(this.location, 'archive', tz(Date.now(), '%F-%H-%M-%S-%3N'))
+        // todo: note that archive and stage need to be on same file system.
+        async(function () {
+            fs.rename(from, to, async())
+        }, function () {
+            // todo: rimraf the archive file if we're not preserving the archive
+        })
+    })
+})
+
 Locket.prototype._merge = cadence(function (async) {
     var merged = {}
     async(function () {
@@ -421,6 +413,14 @@ Locket.prototype._merge = cadence(function (async) {
         this._amalgamate(async())
     })
 })
+
+Locket.prototype._put = function (key, value, options, callback) {
+    this._batch([{ type: 'put', key: key, value: value }], options, callback)
+}
+
+Locket.prototype._del = function (key, options, callback) {
+    this._batch([{ type: 'del', key: key }], options, callback)
+}
 
 // todo: give up on finalizers here, or else make them fire per cadence.
 Locket.prototype._write = cadence(function (async, array, options) {
