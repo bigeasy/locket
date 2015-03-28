@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade Advance to 0.0.14. #208.
  * Re-order functions in module. #207.
  * Remove Twiddle. #205.
  * Upgrade Designate to 0.0.16. #204.

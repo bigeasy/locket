@@ -307,9 +307,9 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
                 } /* else if (!range.inclusive) {
                     index += range.direction == 'forward' ? 1 : -1
                 } */
-                return mvcc.advance[range.direction](cursor._page.items, index)
+                return mvcc.advance[range.direction](extractor, comparator, cursor._page.items, index)
             } else {
-                return mvcc.advance[range.direction](cursor._page.items)
+                return mvcc.advance[range.direction](extractor, comparator, cursor._page.items)
             }
         })
         var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
@@ -379,11 +379,20 @@ Locket.prototype._rotate = cadence(function (async) {
     })
 })
 
+// todo: What makes me think that all of these entries are any good? In fact, if
+// we've failed while writing a log, then loading the leaf is going to start to
+// play the entries of the failed transaction. We need a player that is going to
+// save up the entries, and then play them as batches, if the batch has a
+// comment record attached to it. Then we know that our log here is indeed the
+// latest and greatest.
+//
+// Another problem is that the code below will insert the records with their
+// logged version, instead of converting those verisons to zero.
 Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
         mvcc.splice(function (incoming, existing) {
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
-        }, this._primary, mvcc.advance.forward(this._cursors[1]._page.items), async())
+        }, this._primary, mvcc.advance.forward(extractor, comparator, this._cursors[1]._page.items), async())
     }, function () {
         var merging = this._cursors.pop()
         async(function () {
