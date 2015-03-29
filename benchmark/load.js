@@ -93,7 +93,7 @@ var runner = cadence(function (async, options) {
     })
 })
 
-require('arguable/executable')(module, cadence(function (async, options) {
+require('arguable')(module, cadence(function (async, options) {
     function run () {
         runner(options, function (error) { if (error) throw error })
     }
