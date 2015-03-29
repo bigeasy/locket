@@ -150,7 +150,6 @@ function Locket (location) {
 util.inherits(Locket, AbstractLevelDOWN)
 
 Locket.prototype._versionMarker = function (entry) {
-    console.log(entry)
     this._versions[entry.header[0]] = !! entry.header[1]
     this._version = Math.max(+entry.header[0], this._version)
 }
