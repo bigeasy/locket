@@ -306,9 +306,10 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
                 } /* else if (!range.inclusive) {
                     index += range.direction == 'forward' ? 1 : -1
                 } */
-                return mvcc.advance[range.direction](extractor, comparator, cursor._page.items, index)
+                return mvcc.advance[range.direction](pair.extract, comparator, cursor._page.items, index)
             } else {
-                return mvcc.advance[range.direction](extractor, comparator, cursor._page.items)
+                // todo: why do I use the full extractor with amalgamate?
+                return mvcc.advance[range.direction](pair.extract, comparator, cursor._page.items)
             }
         })
         var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))

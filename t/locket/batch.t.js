@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, require('cadence/redux')(prove))
+require('proof')(2, require('cadence/redux')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -12,6 +12,8 @@ function prove (async, assert) {
     var Locket = require('../..')
 
     var tmp = path.join(__dirname, '../tmp')
+
+    var alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('')
 
     async(function () {
         var location = path.join(tmp, 'put')
@@ -25,13 +27,48 @@ function prove (async, assert) {
             locket.batch([], async())
         }, function () {
             locket.batch([
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) },
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 0 }) }
+              { type: 'put', key: 'a', value: JSON.stringify({ value: 0 }) },
+              { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) }
             ], async())
         }, function () {
             locket.get('a', async())
         }, function (got) {
-            assert(JSON.parse(got), { value: 0 }, 'put')
+            assert(JSON.parse(got), { value: 1 }, 'put')
+        }, function () {
+            var batch = alphabet.filter(function (letter, index) {
+                return index % 2 == 0
+            }).map(function (letter, index) {
+                return { type: 'put', key: letter, value: index * 2 }
+            })
+            locket.batch(batch, async())
+        }, function () {
+            var batch = alphabet.filter(function (letter, index) {
+                return index % 2 == 1
+            }).map(function (letter, index) {
+                return { type: 'put', key: letter, value: index * 2 + 1 }
+            })
+            var keys = [], iterator = locket.iterator({ keyAsBuffer: false })
+            async(function () {
+                var count = 0, loop = async(function () {
+                    if (++count == 7) return [ loop ]
+                    iterator.next(async())
+                }, function (key) {
+                    keys.push(key)
+                })()
+            }, function () {
+                locket.batch(batch, async())
+            }, function () {
+                var loop = async(function () {
+                    iterator.next(async())
+                }, function (key) {
+                    if (key == null) return [ loop ]
+                    keys.push(key)
+                })()
+            }, function () {
+                assert([
+                    'a', 'c', 'e', 'g', 'i', 'k', 'm', 'o', 'q', 's', 'u', 'w', 'y'
+                ], keys, 'concurrent batch')
+            })
         })
     })
 }
