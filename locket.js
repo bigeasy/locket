@@ -392,7 +392,7 @@ Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
         mvcc.splice(function (incoming, existing) {
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
-        }, this._primary, mvcc.advance.forward(extractor, comparator, this._cursors[1]._page.items), async())
+        }, this._primary, mvcc.advance.forward(null, null, this._cursors[1]._page.items), async())
     }, function () {
         var merging = this._cursors.pop()
         async(function () {
@@ -448,6 +448,12 @@ Locket.prototype._write = cadence(function (async, array, options) {
         this._appending.push(version) // todo: convince yourself there's no race condition
                           // todo: add a count of locks?
         appender.writeUserRecord([ version ])
+        // todo: you use Advance around different sorts of things, so that when
+        // you merge it is already exploded, and here you explode as if it was
+        // coming off the file, so the extractor used with Advance will only
+        // need to return the key. Figure out why this was confusing and
+        // document it, or accept that it will always confuse you when you come
+        // back to this.
         for (var i = 0, I = array.length; i < I; i++) {
             var entry = array[i]
             var record = pair.record(entry.key, entry.value, entry.type, version, properties)
