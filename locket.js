@@ -64,6 +64,8 @@ var framer = new BinaryFramer
 var extractor = mvcc.revise.extractor(pair.extract);
 var comparator = mvcc.revise.comparator(pair.compare)
 
+function advanceComparator (a, b) { return comparator(a.key, b.key) }
+
 // An implementation of the LevelDOWN `Iterator` object.
 //
 // The LevelUP interface allows you to specify encodings at both when you create
@@ -306,10 +308,9 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
                 } /* else if (!range.inclusive) {
                     index += range.direction == 'forward' ? 1 : -1
                 } */
-                return mvcc.advance[range.direction](pair.extract, comparator, cursor._page.items, index)
+                return mvcc.advance[range.direction](advanceComparator, cursor._page.items, index)
             } else {
-                // todo: why do I use the full extractor with amalgamate?
-                return mvcc.advance[range.direction](pair.extract, comparator, cursor._page.items)
+                return mvcc.advance[range.direction](advanceComparator, cursor._page.items)
             }
         })
         var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
@@ -392,7 +393,7 @@ Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
         mvcc.splice(function (incoming, existing) {
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
-        }, this._primary, mvcc.advance.forward(null, null, this._cursors[1]._page.items), async())
+        }, this._primary, mvcc.advance.forward(null, this._cursors[1]._page.items), async())
     }, function () {
         var merging = this._cursors.pop()
         async(function () {
