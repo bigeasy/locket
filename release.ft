@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade Splice to 0.0.21. #213.
  * Upgrade Advance to 0.0.15. #212.
  * Implement concurrent batches. #211.
  * Upgrade Arguable to 0.0.23. #209.
