@@ -37,6 +37,7 @@ var mvcc = {
     homogenize: require('homogenize'),
     designate: require('designate'),
     amalgamate: require('amalgamate'),
+    twiddle: require('twiddle'),
     dilute: require('dilute')
 }
 
@@ -391,9 +392,25 @@ Locket.prototype._rotate = cadence(function (async) {
 // logged version, instead of converting those verisons to zero.
 Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
+        var iterator
+        iterator = mvcc.advance.forward(null, this._cursors[1]._page.items)
+        iterator = mvcc.twiddle(iterator, function (item) {
+            return {
+                key: {
+                    value: item.key.value,
+                    version: 0
+                },
+                record: {
+                    key: item.record.key,
+                    value: item.record.value,
+                    operation: item.record.operation,
+                    version: 0
+                }
+            }
+        })
         mvcc.splice(function (incoming, existing) {
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
-        }, this._primary, mvcc.advance.forward(null, this._cursors[1]._page.items), async())
+        }, this._primary, iterator, async())
     }, function () {
         var merging = this._cursors.pop()
         async(function () {
