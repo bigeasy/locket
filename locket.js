@@ -394,6 +394,7 @@ Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
         var iterator
         iterator = mvcc.advance.forward(null, this._cursors[1]._page.items)
+        iterator = mvcc.designate.forward(pair.compare, this._snapshot(), {}, iterator)
         iterator = mvcc.twiddle(iterator, function (item) {
             return {
                 key: {
