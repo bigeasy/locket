@@ -29,7 +29,7 @@ function prove (async, assert) {
             locket = new Locket(__dirname)
             locket.open(async())
         }, function (error) {
-          assert(error.message, 'not a Locket datastore')
+            assert(error.message, 'not a Locket datastore')
         }])
     }, function () {
         var empty = path.join(tmp, 'empty')
