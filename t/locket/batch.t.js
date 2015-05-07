@@ -27,8 +27,8 @@ function prove (async, assert) {
             locket.batch([], async())
         }, function () {
             locket.batch([
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 0 }) },
-              { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) }
+                { type: 'put', key: 'a', value: JSON.stringify({ value: 0 }) },
+                { type: 'put', key: 'a', value: JSON.stringify({ value: 1 }) }
             ], async())
         }, function () {
             locket.get('a', async())
