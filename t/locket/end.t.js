@@ -30,21 +30,21 @@ function prove (async, assert) {
             // these are a copy of what levelup passes to the
             // leveldown iterator when it does createReadStream
             var iteratorOptions = {
-              keys: true,
-              values: true,
-              createIfMissing: true,
-              errorIfExists: false,
-              keyEncoding: 'utf8',
-              valueEncoding: 'binary',
-              compression: true,
-              init: true,
-              defaults: true,
-              writeBufferSize: 16777216,
-              start: 'ÿdÿ',
-              end: 'ÿdÿÿ',
-              limit: -1,
-              keyAsBuffer: false,
-              valueAsBuffer: true
+                keys: true,
+                values: true,
+                createIfMissing: true,
+                errorIfExists: false,
+                keyEncoding: 'utf8',
+                valueEncoding: 'binary',
+                compression: true,
+                init: true,
+                defaults: true,
+                writeBufferSize: 16777216,
+                start: 'ÿdÿ',
+                end: 'ÿdÿÿ',
+                limit: -1,
+                keyAsBuffer: false,
+                valueAsBuffer: true
             }
 
             var iterator = locket.iterator(iteratorOptions)
