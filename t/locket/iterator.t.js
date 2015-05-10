@@ -23,9 +23,9 @@ function prove (async, assert) {
             locket.open({ createIfMissing: true }, async())
         }, function () {
             locket.batch([
-              { type: 'put', key: 'a', value: 'able' },
-              { type: 'put', key: 'b', value: 'baker' },
-              { type: 'put', key: 'c', value: 'charlie' }
+                { type: 'put', key: 'a', value: 'able' },
+                { type: 'put', key: 'b', value: 'baker' },
+                { type: 'put', key: 'c', value: 'charlie' }
             ], async())
         }, function () {
             var keys = [], iterator = locket.iterator()
