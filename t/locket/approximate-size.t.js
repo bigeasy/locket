@@ -25,9 +25,9 @@ function prove (async, assert) {
             locket.batch([], async())
         }, function () {
             locket.batch([
-              { type: 'put', key: 'a', value: '1' },
-              { type: 'put', key: 'b', value: '2' },
-              { type: 'put', key: 'c', value: '3' }
+                { type: 'put', key: 'a', value: '1' },
+                { type: 'put', key: 'b', value: '2' },
+                { type: 'put', key: 'c', value: '3' }
             ], async())
         }, function () {
             locket.approximateSize('a', 'c', async())
