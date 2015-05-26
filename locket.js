@@ -210,20 +210,16 @@ Locket.prototype._open = cadence(function (async, options) {
     async(function () {
         var readdir = async([function () {
             fs.readdir(this.location, async())
-        }, function (error) {
-            if (error.code === 'ENOENT') {
-                if (options.createIfMissing == null || options.createIfMissing) {
-                    exists = false
-                    async(function () {
-                        mkdirp(this.location, async())
-                    }, function () {
-                        return [ readdir() ]
-                    })
-                } else {
-                    throw new Error('does not exist')
-                }
+        }, /^ENOENT$/, function (error) {
+            if (options.createIfMissing == null || options.createIfMissing) {
+                exists = false
+                async(function () {
+                    mkdirp(this.location, async())
+                }, function () {
+                    return [ readdir() ]
+                })
             } else {
-                throw error
+                throw new Error('does not exist')
             }
         }], function (files) {
             return [ readdir, files ]
