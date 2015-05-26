@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade Cadence to 0.0.53. #217.
  * Use Designate to iterate over merging log. #216.
  * Set version to 0 during merge using Twiddle. #214.
  * Upgrade Splice to 0.0.21. #213.
