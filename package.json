@@ -11,11 +11,7 @@
     "contributors":     [],
     "homepage":         "https://github.com/bigeasy/locket",
     "bugs":             "https://github.com/bigeasy/locket/issues",
-    "licenses":
-    [{
-                        "type": "MIT",
-                        "url": "http://github.com/bigeasy/locket/raw/master/LICENSE"
-    }],
+    "license":          "MIT",
     "main":             "locket",
     "repository":
     {
