@@ -27,7 +27,7 @@
                         "cadence":            "0.0.54",
                         "abstract-leveldown": "2.1.0",
                         "sequester":          "0.0.8",
-                        "rimraf":             "~2.2",
+                        "rimraf":             "2.4.0",
                         "timezone":           "0.0.38",
                         "mkdirp":             "~0.3",
                         "b-tree":             "0.0.39",
