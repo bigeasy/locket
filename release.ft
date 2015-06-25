@@ -4,6 +4,7 @@ Candence now uses `null` to indicate an event callback. Upgrading Cadence causes
 
 # Issue by Issue
 
+ * Upgrade Cadence to 0.0.56. #224.
  * Upgrade LevelDB benchmark dependencies. #223.
  * Upgrade `timezone` to 0.0.41. #222.
  * Upgrade `mkdir` to 5.4.1. #221.
