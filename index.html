@@ -13,11 +13,11 @@
 </div>
 
 <div class="unit description markdown"><p>Zero dependency routing for the browser and Node.js.</p>
-<h2>Route Callbacks</h2>
+<h2 id="route-callbacks">Route Callbacks</h2>
 <p>When you declare a route, you provide a callback function that the reactor will
 invoke if the route matches. Route callbacks always receive parameters extracted
 from the path as their first argument.</p>
-<h2>Route Patterns</h2>
+<h2 id="route-patterns">Route Patterns</h2>
 <p>Simple parameterized routes provide a parameter object as a first argument.</p>
 <pre><code class="lang-javascript"><div class="highlight"><pre><span class="nx">reactor</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;/photos/:user&quot;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">params</span><span class="p">,</span> <span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
   <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">params</span><span class="p">));</span>
@@ -44,15 +44,15 @@ parts use a double star before the parameter name.</p>
 </pre></div>
 </code></pre>
 <p>The above script will print <code>{ pathInfo: &quot;cats/lol.jpg&quot; }</code> to the console.</p>
-<h2>Change Log</h2>
+<h2 id="change-log">Change Log</h2>
 <p>Changes for each release.</p>
-<h3>Version 0.0.7</h3>
+<h3 id="version-0-0-7">Version 0.0.7</h3>
 <p>Mon Jul 22 04:18:54 UTC 2013</p>
 <ul>
 <li>Fix bad match when file is smaller than suffix. #23.</li>
 <li>Return definition in match. #24.</li>
 </ul>
-<h3>Version 0.0.6</h3>
+<h3 id="version-0-0-6">Version 0.0.6</h3>
 <p>Sat Jul 20 01:42:36 UTC 2013</p>
 <ul>
 <li>Remove callbacks. Just a list of matches. #21.</li>
@@ -60,7 +60,7 @@ parts use a double star before the parameter name.</p>
 <li>Upgrade to Proof 0.0.32.</li>
 <li>Coverage with Istanbul and Coveralls. #18.</li>
 </ul>
-<h3>Version 0.0.5</h3>
+<h3 id="version-0-0-5">Version 0.0.5</h3>
 <p>Thu Mar 21 23:41:09 UTC 2013</p>
 <ul>
 <li>Parameterize the <code>find.js</code> file suffix. #15.</li>
@@ -70,7 +70,7 @@ parts use a double star before the parameter name.</p>
 <li>POSIX shell compatible test helpers.</li>
 <li>Upgrade Proof to 0.0.27.</li>
 </ul>
-<h3>Version 0.0.4</h3>
+<h3 id="version-0-0-4">Version 0.0.4</h3>
 <p>Sun Dec  9 17:56:25 UTC 2012</p>
 <ul>
 <li>Pass parameters to callback as first argument. #12.</li>
@@ -79,7 +79,7 @@ parts use a double star before the parameter name.</p>
 <li>Add <code>.js</code> suffix to test programs. #9.</li>
 <li>Clean up AMD/CommonJS invocation switch. #8.</li>
 </ul>
-<h3>Version 0.0.3</h3>
+<h3 id="version-0-0-3">Version 0.0.3</h3>
 <p>Mon Aug 13 01:55:31 UTC 2012</p>
 <ul>
 <li>Remove echo of method and url. #7.</li>
@@ -87,7 +87,7 @@ parts use a double star before the parameter name.</p>
 <li>Convert <code>t/sizes.t</code> to work on OS X. #6.</li>
 <li>Case-insensitive request method match. #5.</li>
 </ul>
-<h3>Version 0.0.2</h3>
+<h3 id="version-0-0-2">Version 0.0.2</h3>
 <p>Thu Jul 19 08:14:30 UTC 2012</p>
 <ul>
 <li>Build on Travis CI. #3.</li>
