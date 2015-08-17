@@ -21,8 +21,7 @@ var path    = require('path')
 var mkdirp  = require('mkdirp')
 
 // Cadence for asynchornous control flow.
-var cadence = require('cadence/redux')
-require('cadence/loops')
+var cadence = require('cadence')
 
 // TODO: Move into `mvcc` hash.
 var pair = require('pair')
@@ -120,12 +119,12 @@ Iterator.prototype._next = cadence(function (async) {
         // that there are no more items.
         var loop = async(function () {
             if (this._done) {
-                return [ loop ]
+                return [ loop.break ]
             }
             var item = this._iterator.get()
             if (item) {
-                return [ loop, this._decoders.key(item.record.key),
-                               this._decoders.value(item.record.value) ]
+                return [ loop.break, this._decoders.key(item.record.key),
+                                     this._decoders.value(item.record.value) ]
             }
             this._iterator.next(async())
         }, function (more) {
@@ -216,13 +215,13 @@ Locket.prototype._open = cadence(function (async, options) {
                 async(function () {
                     mkdirp(this.location, async())
                 }, function () {
-                    return [ readdir() ]
+                    return [ readdir.continue ]
                 })
             } else {
                 throw new Error('does not exist')
             }
         }], function (files) {
-            return [ readdir, files ]
+            return [ readdir.break, files ]
         })()
     }, function (files) {
         if (exists && options.errorIfExists) {
@@ -536,7 +535,7 @@ Locket.prototype._approximateSize = cadence(function (async, from, to) {
                         approximateSize += item.heft
                     }
                 } else {
-                    return [ loop, approximateSize ]
+                    return [ loop.break, approximateSize ]
                 }
             })()
         })

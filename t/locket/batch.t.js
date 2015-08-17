@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(2, require('cadence/redux')(prove))
+require('proof')(2, require('cadence')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -50,7 +50,7 @@ function prove (async, assert) {
             var keys = [], iterator = locket.iterator({ keyAsBuffer: false })
             async(function () {
                 var count = 0, loop = async(function () {
-                    if (++count == 7) return [ loop ]
+                    if (++count == 7) return [ loop.break ]
                     iterator.next(async())
                 }, function (key) {
                     keys.push(key)
@@ -61,7 +61,7 @@ function prove (async, assert) {
                 var loop = async(function () {
                     iterator.next(async())
                 }, function (key) {
-                    if (key == null) return [ loop ]
+                    if (key == null) return [ loop.break ]
                     keys.push(key)
                 })()
             }, function () {

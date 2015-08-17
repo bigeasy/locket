@@ -14,7 +14,7 @@
 */
 
 var Locket = require('../')
-var cadence = require('cadence/redux')
+var cadence = require('cadence')
 var path = require('path')
 var crypto = require('crypto')
 var seedrandom = require('seedrandom')
@@ -22,8 +22,6 @@ var levelup = require('levelup')
 var rimraf = require('rimraf')
 
 var mkdirp = require('mkdirp')
-
-require('cadence/ee')
 
 var random = (function () {
     var random = seedrandom(0)
@@ -67,7 +65,7 @@ var runner = cadence(function (async, options) {
     }, function (db) {
         async(function () {
             var batch = 0, loop = async(function () {
-                if (batch == 7) return [ loop ]
+                if (batch == 7) return [ loop.break ]
                 db.batch(batches[batch], async())
                 batch++
             })()
@@ -94,8 +92,5 @@ var runner = cadence(function (async, options) {
 })
 
 require('arguable')(module, cadence(function (async, options) {
-    function run () {
-        runner(options, function (error) { if (error) throw error })
-    }
-    run()
+    runner(options, async())
 }))

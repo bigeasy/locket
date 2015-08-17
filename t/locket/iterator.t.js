@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(4, require('cadence/redux')(prove))
+require('proof')(4, require('cadence')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -34,7 +34,7 @@ function prove (async, assert) {
                     iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ loop ]
+                    else return [ loop.break ]
                 })()
             }, function () {
                 assert(keys, [ 'a', 'b', 'c' ], 'left most to end')
@@ -53,7 +53,7 @@ function prove (async, assert) {
                         keys.push(key)
                         values.push(value)
                     } else {
-                        return [ loop ]
+                        return [ loop.break ]
                     }
                 })()
             }, function () {
@@ -68,7 +68,7 @@ function prove (async, assert) {
                     iterator.next(async())
                 }, function (key, value) {
                     if (key && value) keys.push(key.toString())
-                    else return [ loop ]
+                    else return [ loop.break ]
                 })()
             }, function () {
                 assert(keys, [ 'c', 'b', 'a' ], 'reversed left most to end')
