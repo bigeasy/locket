@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
-  ___ usage: en_US ___
+  ___ usage ___ en_US ___
   usage: node load.js
 
     All around tests for benchmarking Locket.
@@ -10,7 +10,7 @@
 
     -d, --leveldown
         use leveldown instead of Locket.
-  ___ usage ___
+  ___ . ___
 */
 
 var Locket = require('../')
@@ -30,11 +30,11 @@ var random = (function () {
     }
 })()
 
-var runner = cadence(function (async, options) {
+var runner = cadence(function (async, program) {
     var start, insert, gather
     var file = path.join(__dirname, 'tmp', 'put'), db, records = []
     var o = { createIfMissing: true }
-    if (!options.params.leveldown) {
+    if (!program.param.leveldown) {
         o.db = require('..')
     }
     var batches = []
@@ -91,6 +91,6 @@ var runner = cadence(function (async, options) {
     })
 })
 
-require('arguable')(module, cadence(function (async, options) {
-    runner(options, async())
+require('arguable')(module, cadence(function (async, program) {
+    runner(program, async())
 }))
