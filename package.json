@@ -24,7 +24,7 @@
                         "advance":              "0.0.15",
                         "amalgamate":           "0.0.9",
                         "b-tree":               "0.0.39",
-                        "cadence":              "0.2.5",
+                        "cadence":              "0.4.1",
                         "constrain":            "0.0.12",
                         "designate":            "0.0.16",
                         "dilute":               "0.0.11",
@@ -43,6 +43,7 @@
     {
                         "arguable":             "0.0.37",
                         "concat-stream":        "1.4.1",
+                        "delta":                "0.0.4",
                         "leveldown":            "1.4.2",
                         "levelup":              "1.3.0",
                         "proof":                "0.0.56",

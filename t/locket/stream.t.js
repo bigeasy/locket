@@ -5,6 +5,7 @@ require('proof')(2, require('cadence')(prove))
 function prove (async, assert) {
     var path = require('path')
     var fs = require('fs')
+    var Delta = require('delta')
 
     var rimraf = require('rimraf')
     var cadence = require('cadence')
@@ -33,7 +34,7 @@ function prove (async, assert) {
                     assert(record.value, '1', 'value')
                 })
             read.pipe(consume)
-            async.ee(consume).end('finish').error()
+            var delta = new Delta(async()).ee(consume).on('finish')
         }, function () {
             locket.close(async())
         })
