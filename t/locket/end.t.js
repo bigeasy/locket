@@ -11,7 +11,6 @@ function prove (async, assert) {
 
     var Locket = require('../..')
     var levelup = require('levelup')
-    var concat = require('concat-stream')
 
     var tmp = path.join(__dirname, '../tmp')
 

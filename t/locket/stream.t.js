@@ -12,7 +12,6 @@ function prove (async, assert) {
 
     var Locket = require('../..')
     var levelup = require('levelup')
-    var concat = require('concat-stream')
 
     var tmp = path.join(__dirname, '../tmp')
 
@@ -27,15 +26,12 @@ function prove (async, assert) {
         }, function () {
             locket.put('a', 1, async())
         }, function () {
-            var read = locket.createReadStream(),
-                consume = concat(function(rows) {
-                    var record = rows.shift()
-                    assert(record.key, 'a', 'key')
-                    assert(record.value, '1', 'value')
-                })
-            read.pipe(consume)
-            var delta = new Delta(async()).ee(consume).on('finish')
-        }, function () {
+            var read = locket.createReadStream()
+            var delta = new Delta(async()).ee(read).on('data', []).on('end')
+        }, function (rows) {
+            var record = rows.shift()
+            assert(record.key, 'a', 'key')
+            assert(record.value, '1', 'value')
             locket.close(async())
         })
     })
