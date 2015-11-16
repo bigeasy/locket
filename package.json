@@ -24,7 +24,7 @@
                         "abstract-leveldown": "2.4.1",
                         "sequester":          "0.0.8",
                         "rimraf":             "2.4.0",
-                        "timezone":           "0.0.41",
+                        "timezone":           "0.0.47",
                         "mkdirp":             "0.5.1",
                         "b-tree":             "0.0.39",
                         "constrain":          "0.0.12",
