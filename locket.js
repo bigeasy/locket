@@ -470,7 +470,8 @@ Locket.prototype._write = cadence(function (async, array, options) {
         // back to this.
         for (var i = 0, I = array.length; i < I; i++) {
             var entry = array[i]
-            var record = pair.record(entry.key, entry.value, entry.type, version, properties)
+            var value = entry.value == null ? '' : entry.value
+            var record = pair.record(entry.key, value, entry.type, version, properties)
             var key = extractor(record)
             var index = sheaf.find(page, key, 0)
             var replace = 0

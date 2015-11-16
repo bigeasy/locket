@@ -21,7 +21,7 @@
     "dependencies":
     {
                         "cadence":            "0.2.5",
-                        "abstract-leveldown": "2.1.0",
+                        "abstract-leveldown": "2.4.1",
                         "sequester":          "0.0.8",
                         "rimraf":             "2.4.0",
                         "timezone":           "0.0.41",
@@ -44,8 +44,8 @@
                         "seedrandom":         "2.3.10",
                         "proof":              "0.0.51",
                         "tap":                "*",
-                        "levelup":            "1.2.1",
-                        "leveldown":          "1.3.0",
+                        "levelup":            "1.3.0",
+                        "leveldown":          "1.4.2",
                         "concat-stream":      "1.4.1",
                         "arguable":           "0.0.23"
     },
