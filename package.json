@@ -22,7 +22,6 @@
     {
                         "abstract-leveldown":   "2.4.1",
                         "advance":              "0.0.15",
-                        "amalgamate":           "0.0.9",
                         "b-tree":               "0.0.39",
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.12",

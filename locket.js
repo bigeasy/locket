@@ -35,7 +35,6 @@ var mvcc = {
     splice: require('splice'),
     homogenize: require('homogenize'),
     designate: require('designate'),
-    amalgamate: require('amalgamate'),
     twiddle: require('twiddle'),
     dilute: require('dilute')
 }
