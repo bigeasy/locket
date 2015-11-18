@@ -34,7 +34,7 @@
                         "riffle":               "0.0.17",
                         "rimraf":               "2.4.3",
                         "sequester":            "0.0.10",
-                        "splice":               "0.0.21",
+                        "splice":               "0.0.22",
                         "timezone":             "0.0.47",
                         "twiddle":              "0.0.4"
     },
