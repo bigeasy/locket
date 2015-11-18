@@ -22,7 +22,7 @@
     {
                         "abstract-leveldown":   "2.4.1",
                         "advance":              "0.0.15",
-                        "b-tree":               "0.0.39",
+                        "b-tree":               "0.0.40",
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.13",
                         "designate":            "0.0.16",
