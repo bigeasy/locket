@@ -36,7 +36,7 @@
                         "sequester":            "0.0.10",
                         "splice":               "0.0.22",
                         "timezone":             "0.0.47",
-                        "twiddle":              "0.0.4"
+                        "twiddle":              "0.0.5"
     },
     "devDependencies":
     {
