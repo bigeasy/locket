@@ -25,7 +25,7 @@
                         "b-tree":               "0.0.40",
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.13",
-                        "designate":            "0.0.16",
+                        "designate":            "0.0.17",
                         "dilute":               "0.0.12",
                         "homogenize":           "0.0.12",
                         "mkdirp":               "0.5.1",
