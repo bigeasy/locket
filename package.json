@@ -26,7 +26,7 @@
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.13",
                         "designate":            "0.0.17",
-                        "dilute":               "0.0.12",
+                        "dilute":               "0.0.14",
                         "homogenize":           "0.0.12",
                         "mkdirp":               "0.5.1",
                         "pair":                 "0.0.7",
