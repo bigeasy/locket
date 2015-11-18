@@ -27,7 +27,7 @@
                         "constrain":            "0.0.13",
                         "designate":            "0.0.17",
                         "dilute":               "0.0.14",
-                        "homogenize":           "0.0.12",
+                        "homogenize":           "0.0.14",
                         "mkdirp":               "0.5.1",
                         "pair":                 "0.0.7",
                         "revise":               "0.0.4",
