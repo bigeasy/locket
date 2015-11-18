@@ -21,22 +21,15 @@
     "dependencies":
     {
                         "abstract-leveldown":   "2.4.1",
-                        "advance":              "0.0.16",
                         "b-tree":               "0.0.40",
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.13",
-                        "designate":            "0.0.17",
-                        "dilute":               "0.0.14",
-                        "homogenize":           "0.0.14",
                         "mkdirp":               "0.5.1",
+                        "mvcc":                 "0.0.3",
                         "pair":                 "0.0.7",
-                        "revise":               "0.0.5",
-                        "riffle":               "0.0.18",
                         "rimraf":               "2.4.3",
                         "sequester":            "0.0.10",
-                        "splice":               "0.0.22",
-                        "timezone":             "0.0.47",
-                        "twiddle":              "0.0.5"
+                        "timezone":             "0.0.47"
     },
     "devDependencies":
     {

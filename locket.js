@@ -28,16 +28,7 @@ var pair = require('pair')
 var constrain = require('constrain')
 
 // Modules for implementation of MVCC on top of Strata.
-var mvcc = {
-    revise: require('revise'),
-    riffle: require('riffle'),
-    advance: require('advance'),
-    splice: require('splice'),
-    homogenize: require('homogenize'),
-    designate: require('designate'),
-    twiddle: require('twiddle'),
-    dilute: require('dilute')
-}
+var mvcc = require('mvcc')
 
 // A `Buffer` conversion function for values that are already `Buffer`s.
 function echo (object) {
