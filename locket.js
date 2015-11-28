@@ -54,7 +54,7 @@ var framer = new BinaryFramer
 var extractor = mvcc.revise.extractor(pair.extract);
 var comparator = mvcc.revise.comparator(pair.compare)
 
-function advanceComparator (a, b) { return comparator(a.key, b.key) }
+function keyComparator (a, b) { return comparator(a.key, b.key) }
 
 // An implementation of the LevelDOWN `Iterator` object.
 //
@@ -294,9 +294,9 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
                 } /* else if (!range.inclusive) {
                     index += range.direction == 'forward' ? 1 : -1
                 } */
-                return mvcc.advance[range.direction](advanceComparator, cursor._page.items, index)
+                return mvcc.advance[range.direction](keyComparator, cursor._page.items, index)
             } else {
-                return mvcc.advance[range.direction](advanceComparator, cursor._page.items)
+                return mvcc.advance[range.direction](keyComparator, cursor._page.items)
             }
         })
         var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
