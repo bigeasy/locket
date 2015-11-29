@@ -21,11 +21,11 @@
     "dependencies":
     {
                         "abstract-leveldown":   "2.4.1",
-                        "b-tree":               "0.0.40",
+                        "b-tree":               "0.0.41",
                         "cadence":              "0.4.1",
                         "constrain":            "0.0.13",
                         "mkdirp":               "0.5.1",
-                        "mvcc":                 "0.0.3",
+                        "mvcc":                 "0.0.5",
                         "pair":                 "0.0.7",
                         "rimraf":               "2.4.3",
                         "sequester":            "0.0.10",

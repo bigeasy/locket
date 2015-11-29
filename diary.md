@@ -79,3 +79,10 @@ the sense that we're waiting for the write to flush.
 
 I start to worry about when a version is committed, but then I recall that this
 is not a concern for LevelDB and is therefore not a concern for Locket.
+
+## Multiple Writers
+
+They would all write to their own log, but the logs would be merged into a
+single page, so that loading the page reads in many logs. They records would get
+put in the right order and MVCC takes over. Still only ever two outstanding
+pages, but many logs for those pages.

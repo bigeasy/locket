@@ -1,5 +1,22 @@
 module.exports = Locket
 
+// In case you forgot, Alan. You've finished a rewrite. You no longer have many
+// different staging trees, you only have one staging tree and it is not a
+// tree, it is simply a log, a b-tree with only one leaf. When it is time to
+// merge, it is renamed and then it is merged. Thus there is the primary tree,
+// the staging log and possibly a merging log. There are, therefore, only two
+// extra cursors in addition to the primary tree, and they can always be read
+// pretty much directly using an Advance iterator, instead of having to traverse
+// them as if they where actual trees.
+//
+// We have no way of vacuuming the primary tree at this point.
+//
+// *Note:*
+//
+// Please curb your compulsion to refactor the upstream libraries any further.
+//
+// You thought long and hard about this. You are not getting smarter.
+
 // Modules for storage and concurrency.
 var sequester         = require('sequester')
 var Strata            = require('b-tree')
@@ -266,11 +283,11 @@ Locket.prototype._snapshot = function () {
 // Iteration of the database requires merging the results from the deep storage
 // b-tree and the one or two staging logs.
 //
-// We do this by creating a merged iterator across the b-tree and the logs. This
-// is an iteartor that takes one or more iterators and advances through. It will
-// advance each iterator and then when it is advanced, it returns the least
-// value of each of the three iterators (or greatest value if iteration is
-// reversed.)
+// We do this by creating a merged Homogonize iterator across the b-tree and the
+// logs. This is an iteartor that takes one or more iterators and advances
+// through. It will advance each iterator and then when it is advanced, it
+// returns the least value of each of the three iterators (or greatest value if
+// iteration is reversed.)
 //
 // We then use the versioned iterator from the Designate module which will
 // select the key/value pair for a key that has the greatest committed version.
@@ -279,6 +296,8 @@ Locket.prototype._snapshot = function () {
 // external iterator; start, stop, greater than, less than, greater than or
 // equal to, less than or equal to. We use a Dilute iterator to select out only
 // records that have not been deleted and that match the user's range critera.
+
+//
 Locket.prototype._internalIterator = cadence(function (async, range, versions) {
     var version = range.direction == 'forward' ? 0 : Math.MAX_VALUE
     var key = range.key ? { value: range.key, version: version } : null
@@ -288,15 +307,15 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
         var sheaf = this._staging.sheaf
         var advances = this._cursors.map(function (cursor) {
             if (range.key) {
-                var index = sheaf.find(cursor._page, key, 0)
+                var index = sheaf.find(cursor.page, key, 0)
                 if (index < 0) {
                     index = range.direction == 'forward' ? ~index : ~index - 1
                 } /* else if (!range.inclusive) {
                     index += range.direction == 'forward' ? 1 : -1
                 } */
-                return mvcc.advance[range.direction](keyComparator, cursor._page.items, index)
+                return mvcc.advance[range.direction](keyComparator, cursor.page.items, index)
             } else {
-                return mvcc.advance[range.direction](keyComparator, cursor._page.items)
+                return mvcc.advance[range.direction](keyComparator, cursor.page.items)
             }
         })
         var homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
@@ -339,6 +358,7 @@ Locket.prototype._get = cadence(function (async, key, options) {
     })
 })
 
+// todo: i've lost track of why there are only two in the `_cursors` array.
 Locket.prototype._rotate = cadence(function (async) {
     async(function () {
         this._rotating.exclude(async())
@@ -378,7 +398,7 @@ Locket.prototype._rotate = cadence(function (async) {
 Locket.prototype._amalgamate = cadence(function (async) {
     async(function () {
         var iterator
-        iterator = mvcc.advance.forward(null, this._cursors[1]._page.items)
+        iterator = mvcc.advance.forward(null, this._cursors[1].page.items)
         iterator = mvcc.designate.forward(pair.compare, this._snapshot(), {}, iterator)
         iterator = mvcc.twiddle(iterator, function (item) {
             return {
@@ -395,6 +415,7 @@ Locket.prototype._amalgamate = cadence(function (async) {
             }
         })
         mvcc.splice(function (incoming, existing) {
+            console.log(incoming.record)
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
         }, this._primary, iterator, async())
     }, function () {
@@ -444,7 +465,7 @@ Locket.prototype._write = cadence(function (async, array, options) {
         this._append.unlock()
     }], function () {
         var properties = [ options, this._options ]
-        var sheaf = this._staging.sheaf, page = this._cursors[0]._page
+        var sheaf = this._staging.sheaf, page = this._cursors[0].page
         var appender = this._appender
         if (!this._appender) {
             appender = this._appender = this._staging.logger.createAppender(page)

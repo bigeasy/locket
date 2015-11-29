@@ -34,10 +34,16 @@ function prove (async, assert) {
             locket = new Locket(location)
             locket.open({ createIfMissing: true }, async())
         }, function () {
+            console.log('foo')
+            locket.get(0, async())
+        }, function () {
+            console.log('foo')
             locket._merge(async())
         }, function () {
+            console.log('foo')
             locket.get(0, async())
         }, function (a) {
+            console.log('foo')
             assert(JSON.parse(a), { value: 0 }, 'merged a')
             locket.get(1, async())
         }, function (b) {
