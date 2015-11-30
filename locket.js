@@ -23,6 +23,7 @@ var Strata            = require('b-tree')
 var BinaryFramer      = require('b-tree/frame/binary')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
+var Reactor           = require('reactor')
 
 // Inheritence.
 var util = require('util')
@@ -155,8 +156,42 @@ function Locket (location) {
     this._primaryBranchSize = 1024
     this._stageLeafSize = 1024
     this._stageBranchSize = 1024
+    this._reactor = new Reactor({ object: this, method: '_doubleCheck' })
 }
 util.inherits(Locket, AbstractLevelDOWN)
+
+Locket.prototype._shouldMergeBranch = function () {
+    return this._cursors[0].page.items.length >= this._stageBranchSize
+}
+
+Locket.prototype._tryCatchKeep = cadence(function (async, attempt) {
+    async([function () {
+        attempt.call(this, async())
+    }, function (error) {
+        this._error = error
+    }])
+})
+
+Locket.prototype._checkError = function () {
+    if (this._error) {
+        console.log(this._error.stack)
+        var error = new Error('balance error')
+        error.cause = this._error
+        throw error
+    }
+}
+
+Locket.prototype._check = function () {
+    if (this._shouldMergeBranch()) {
+        this._reactor.check()
+    }
+}
+
+Locket.prototype._doubleCheck = cadence(function (async) {
+    if (this._shouldMergeBranch()) {
+        this._tryCatchKeep(this._merge, async())
+    }
+})
 
 Locket.prototype._versionMarker = function (entry) {
     this._versions[entry.header[0]] = !! entry.header[1]
@@ -335,6 +370,7 @@ Locket.prototype._iterator = function (options) {
 }
 
 Locket.prototype._get = cadence(function (async, key, options) {
+    this._checkError()
     options = new Options(options, { asBuffer: true })
     if (!Buffer.isBuffer(key)) {
         key = pair.encoder.key([ options, this._options ]).encode(key)
@@ -415,7 +451,6 @@ Locket.prototype._amalgamate = cadence(function (async) {
             }
         })
         mvcc.splice(function (incoming, existing) {
-            console.log(incoming.record)
             return incoming.record.operation == 'put' ? 'insert' : 'delete'
         }, this._primary, iterator, async())
     }, function () {
@@ -522,6 +557,7 @@ Locket.prototype._batch = cadence(function (async, array, options) {
                 this._appending.splice(0, this._appending.length).forEach(function (version) {
                     this._versions[version] = true
                 }, this)
+                this._check()
             })
         }
     })

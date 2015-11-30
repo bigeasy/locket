@@ -25,10 +25,12 @@ function prove (async, assert) {
             locket._primaryLeafSize = 16
             locket.open({ createIfMissing: true }, async())
         }, function () {
+            locket._doubleCheck(async())
+        }, function () {
             locket.batch([], async())
         }, function () {
             var batch = []
-            for (var i = 0; i < 1024; i++) {
+            for (var i = 0; i < 1023; i++) {
                 batch.push({ type: 'put', key: i, value: JSON.stringify({ value: i }) })
             }
             locket.batch(batch, async())
@@ -49,7 +51,7 @@ function prove (async, assert) {
         }, function (c) {
             assert(JSON.parse(c), { value: 2 }, 'merged c')
             var batch = []
-            for (var i = 0; i < 1024; i++) {
+            for (var i = 0; i < 1023; i++) {
                 batch.push({ type: 'del', key: i })
             }
             locket.batch(batch, async())
