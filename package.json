@@ -27,7 +27,7 @@
                         "mkdirp":               "0.5.1",
                         "mvcc":                 "0.0.5",
                         "pair":                 "0.0.7",
-                        "rimraf":               "2.4.3",
+                        "rimraf":               "2.4.4",
                         "sequester":            "0.0.11",
                         "timezone":             "0.0.48"
     },
