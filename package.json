@@ -29,7 +29,7 @@
                         "pair":                 "0.0.7",
                         "rimraf":               "2.4.3",
                         "sequester":            "0.0.10",
-                        "timezone":             "0.0.47"
+                        "timezone":             "0.0.48"
     },
     "devDependencies":
     {
