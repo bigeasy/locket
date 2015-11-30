@@ -28,7 +28,7 @@
                         "mvcc":                 "0.0.5",
                         "pair":                 "0.0.7",
                         "rimraf":               "2.4.3",
-                        "sequester":            "0.0.10",
+                        "sequester":            "0.0.11",
                         "timezone":             "0.0.48"
     },
     "devDependencies":
