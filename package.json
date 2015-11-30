@@ -33,7 +33,7 @@
     },
     "devDependencies":
     {
-                        "arguable":             "0.0.37",
+                        "arguable":             "0.0.38",
                         "delta":                "0.0.4",
                         "leveldown":            "1.4.2",
                         "levelup":              "1.3.0",
