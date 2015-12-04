@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 require('proof')(7, require('cadence')(prove))
 
 function prove (async, assert) {
