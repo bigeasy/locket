@@ -30,7 +30,8 @@
                         "reactor":              "0.0.10",
                         "rimraf":               "2.4.4",
                         "sequester":            "0.0.11",
-                        "timezone":             "0.0.48"
+                        "timezone":             "0.0.48",
+                        "vestibule":            "0.0.1"
     },
     "devDependencies":
     {

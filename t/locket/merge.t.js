@@ -1,4 +1,4 @@
-require('proof')(4, require('cadence')(prove))
+require('proof')(3, require('cadence')(prove))
 
 function prove (async, assert) {
     var path = require('path')
@@ -23,21 +23,17 @@ function prove (async, assert) {
             locket._primaryLeafSize = 16
             locket.open({ createIfMissing: true }, async())
         }, function () {
+            locket._check()
             locket._doubleCheck(async())
         }, function () {
             locket.batch([], async())
         }, function () {
             var batch = []
-            for (var i = 0; i < 1023; i++) {
+            for (var i = 0; i < 1024; i++) {
                 batch.push({ type: 'put', key: i, value: JSON.stringify({ value: i }) })
             }
             locket.batch(batch, async())
-        }, function () {
-            locket.get(0, async())
-        }, function (got) {
-            assert(JSON.parse(got), { value: 0 }, 'unmerged')
-        }, function () {
-            locket._merge(async())
+            locket.merged.enter(async())
         }, function () {
             locket.get(0, async())
         }, function (a) {
@@ -49,7 +45,7 @@ function prove (async, assert) {
         }, function (c) {
             assert(JSON.parse(c), { value: 2 }, 'merged c')
             var batch = []
-            for (var i = 0; i < 1023; i++) {
+            for (var i = 0; i < 1024; i++) {
                 batch.push({ type: 'del', key: i })
             }
             locket.batch(batch, async())

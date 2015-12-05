@@ -24,6 +24,7 @@ var BinaryFramer      = require('b-tree/frame/binary')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 var Reactor           = require('reactor')
+var Vestibule         = require('vestibule')
 
 // Inheritence.
 var util = require('util')
@@ -104,6 +105,7 @@ util.inherits(Iterator, AbstractIterator)
 
 //
 Iterator.prototype._next = cadence(function (async) {
+    this._db._checkError()
     async(function () {
         // Create an iteterator using `Locket._internalIterator` if one does not
         // already exist.
@@ -157,6 +159,7 @@ function Locket (location) {
     this._stageLeafSize = 1024
     this._stageBranchSize = 1024
     this._reactor = new Reactor({ object: this, method: '_doubleCheck' })
+    this.merged = new Vestibule
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
@@ -174,7 +177,6 @@ Locket.prototype._tryCatchKeep = cadence(function (async, attempt) {
 
 Locket.prototype._checkError = function () {
     if (this._error) {
-        console.log(this._error.stack)
         var error = new Error('balance error')
         error.cause = this._error
         throw error
@@ -366,6 +368,7 @@ Locket.prototype._internalIterator = cadence(function (async, range, versions) {
 })
 
 Locket.prototype._iterator = function (options) {
+    this._checkError()
     return new Iterator(this, options)
 }
 
@@ -480,6 +483,8 @@ Locket.prototype._merge = cadence(function (async) {
         this._rotate(async())
     }, function () {
         this._amalgamate(async())
+    }, function () {
+        this.merged.notify()
     })
 })
 
@@ -535,6 +540,7 @@ Locket.prototype._write = cadence(function (async, array, options) {
 })
 
 Locket.prototype._batch = cadence(function (async, array, options) {
+    this._checkError()
     async(function () {
         this._rotating.share(async())
     }, [function () {
@@ -564,6 +570,7 @@ Locket.prototype._batch = cadence(function (async, array, options) {
 })
 
 Locket.prototype._approximateSize = cadence(function (async, from, to) {
+    this._checkError()
     async(function () {
         var range = constrain(pair.compare, function (key) {
             return Buffer.isBuffer(key) ? key : pair.encoder.key([]).encode(key)
