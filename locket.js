@@ -55,7 +55,7 @@ function echo (object) {
 }
 
 // Create a map of options resolving the defaults and whatnot. Kind of a mess.
-// todo: Need to pull some of this options navigation out of Pair, and here into
+// TODO Need to pull some of this options navigation out of Pair, and here into
 // Locket.
 function Options (options, defaults) {
     for (var key in options) {
@@ -276,7 +276,7 @@ Locket.prototype._open = cadence(function (async, options) {
             files = files.filter(function (file) { return file[0] != '.' }).sort()
             if (!files.length) {
                 exists = false
-            // todo: not a very clever recover, something might be in the midst
+            // TODO Not a very clever recover, something might be in the midst
             // of a rotation.
             } else if (!subdirs.every(function (file) { return files.shift() == file }) || files.length) {
                 throw new Error('not a Locket datastore')
@@ -301,6 +301,8 @@ Locket.prototype._open = cadence(function (async, options) {
         async(function () {
             this._openStrataWithCursor('merging', false, this._versionMarker.bind(this), async())
         }, function (cursor) {
+            // TODO Use Snafu to distrupt a merge and then open. Or maybe this
+            // is a special case requireing intervention from a utility.
             if (cursor) {
                 this._cursors[1] = cursor
                 this._amalgamate(async())
@@ -397,7 +399,7 @@ Locket.prototype._get = cadence(function (async, key, options) {
     })
 })
 
-// todo: i've lost track of why there are only two in the `_cursors` array.
+// TODO i've lost track of why there are only two in the `_cursors` array.
 Locket.prototype._rotate = cadence(function (async) {
     async(function () {
         this._rotating.exclude(async())
@@ -425,7 +427,7 @@ Locket.prototype._rotate = cadence(function (async) {
     })
 })
 
-// todo: What makes me think that all of these entries are any good? In fact, if
+// TODO What makes me think that all of these entries are any good? In fact, if
 // we've failed while writing a log, then loading the leaf is going to start to
 // play the entries of the failed transaction. We need a player that is going to
 // save up the entries, and then play them as batches, if the batch has a
@@ -468,11 +470,11 @@ Locket.prototype._amalgamate = cadence(function (async) {
     }, function () {
         var from = path.join(this.location, 'merging')
         var to = path.join(this.location, 'archive', tz(Date.now(), '%F-%H-%M-%S-%3N'))
-        // todo: note that archive and stage need to be on same file system.
+        // TODO Note that archive and stage need to be on same file system.
         async(function () {
             fs.rename(from, to, async())
         }, function () {
-            // todo: rimraf the archive file if we're not preserving the archive
+            // TODO rimraf the archive file if we're not preserving the archive
         })
     })
 })
@@ -496,7 +498,7 @@ Locket.prototype._del = function (key, options, callback) {
     this._batch([{ type: 'del', key: key }], options, callback)
 }
 
-// todo: give up on finalizers here, or else make them fire per cadence.
+// TODO Give up on finalizers here, or else make them fire per Cadence.
 Locket.prototype._write = cadence(function (async, array, options) {
     var version = ++this._version
     async(function () {
@@ -510,10 +512,10 @@ Locket.prototype._write = cadence(function (async, array, options) {
         if (!this._appender) {
             appender = this._appender = this._staging.logger.createAppender(page)
         }
-        this._appending.push(version) // todo: convince yourself there's no race condition
-                          // todo: add a count of locks?
+        this._appending.push(version) // TODO Convince yourself there's no race condition
+                          // TODO Add a count of locks?
         appender.writeUserRecord([ version ])
-        // todo: you use Advance around different sorts of things, so that when
+        // TODO You use Advance around different sorts of things, so that when
         // you merge it is already exploded, and here you explode as if it was
         // coming off the file, so the extractor used with Advance will only
         // need to return the key. Figure out why this was confusing and
