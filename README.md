@@ -4,6 +4,8 @@ Salvage Necklace 5: Inside Locket by [B Zedan](http://www.flickr.com/people/bzed
 
 # Locket
 
+[![Join the chat at https://gitter.im/bigeasy/locket](https://badges.gitter.im/bigeasy/locket.svg)](https://gitter.im/bigeasy/locket?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Stories in Ready](https://badge.waffle.io/bigeasy/locket.png?label=ready&title=Ready)](https://waffle.io/bigeasy/locket)
 
 A pure-JavaScript LevelDB implementation backed by a durable and persistent
