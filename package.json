@@ -22,7 +22,7 @@
     {
                         "abstract-leveldown":   "2.4.1",
                         "b-tree":               "0.0.41",
-                        "cadence":              "0.4.1",
+                        "cadence":              "1.x",
                         "constrain":            "0.0.13",
                         "mkdirp":               "0.5.1",
                         "mvcc":                 "0.0.5",
