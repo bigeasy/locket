@@ -21,7 +21,7 @@
     "dependencies":
     {
                         "abstract-leveldown":   "2.4.1",
-                        "b-tree":               "0.0.41",
+                        "b-tree":               "1.x",
                         "cadence":              "1.x",
                         "constrain":            "0.0.13",
                         "mkdirp":               "0.5.1",
