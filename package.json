@@ -31,7 +31,7 @@
                         "rimraf":               "2.4.4",
                         "sequester":            "0.0.11",
                         "timezone":             "0.0.48",
-                        "vestibule":            "0.0.1"
+                        "vestibule":            "1.x"
     },
     "devDependencies":
     {
