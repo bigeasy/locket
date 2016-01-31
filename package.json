@@ -29,7 +29,7 @@
                         "pair":                 "0.0.7",
                         "reactor":              "0.0.10",
                         "rimraf":               "2.4.4",
-                        "sequester":            "0.0.11",
+                        "sequester":            "1.x",
                         "timezone":             "0.0.48",
                         "vestibule":            "1.x"
     },
