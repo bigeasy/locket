@@ -25,7 +25,7 @@
                         "cadence":              "1.x",
                         "constrain":            "1.x",
                         "mkdirp":               "0.5.1",
-                        "mvcc":                 "0.0.5",
+                        "mvcc":                 "1.x",
                         "pair":                 "1.x",
                         "reactor":              "1.x",
                         "rimraf":               "2.5.1",
