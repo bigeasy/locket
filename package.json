@@ -1,6 +1,6 @@
 {
     "name":             "locket",
-    "version":          "0.0.6",
+    "version":          "1.0.0",
     "author":           "Alan Gutierrez <alan@prettyrobots.com>",
     "description":      "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
     "keywords":
