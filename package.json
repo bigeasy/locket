@@ -26,7 +26,7 @@
                         "constrain":            "1.x",
                         "mkdirp":               "0.5.1",
                         "mvcc":                 "0.0.5",
-                        "pair":                 "0.0.7",
+                        "pair":                 "1.x",
                         "reactor":              "1.x",
                         "rimraf":               "2.5.1",
                         "sequester":            "1.x",
