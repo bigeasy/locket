@@ -1,50 +1,53 @@
 {
-    "name":             "locket",
-    "version":          "1.0.0",
-    "author":           "Alan Gutierrez <alan@prettyrobots.com>",
-    "description":      "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
+    "name":                 "locket",
+    "version":              "1.0.0",
+    "author":               "Alan Gutierrez <alan@prettyrobots.com>",
+    "description":
+
+      "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
+
     "keywords":
     [
-                        "btree", "leveldb", "levelup", "binary",
-                        "database", "json", "b-tree", "concurrent", "persistence"
+                            "btree", "leveldb", "levelup", "binary",
+                            "database", "json", "b-tree", "concurrent", "persistence"
     ],
-    "contributors":     [],
-    "homepage":         "https://github.com/bigeasy/locket",
-    "bugs":             "https://github.com/bigeasy/locket/issues",
-    "license":          "MIT",
-    "main":             "locket",
+    "contributors":         [],
+    "homepage":             "https://github.com/bigeasy/locket",
+    "bugs":                 "https://github.com/bigeasy/locket/issues",
+    "license":              "MIT",
+    "main":                 "locket",
     "repository":
     {
-                        "type": "git",
-                        "url": "http://github.com/bigeasy/locket.git"
+                            "type": "git",
+                            "url": "http://github.com/bigeasy/locket.git"
     },
     "dependencies":
     {
-                        "abstract-leveldown":   "2.4.1",
-                        "b-tree":               "1.x",
-                        "cadence":              "1.x",
-                        "constrain":            "1.x",
-                        "mkdirp":               "0.5.1",
-                        "mvcc":                 "1.x",
-                        "pair":                 "1.x",
-                        "reactor":              "1.x",
-                        "rimraf":               "2.5.1",
-                        "sequester":            "1.x",
-                        "timezone":             "0.0.48",
-                        "vestibule":            "1.x"
+                            "abstract-leveldown":           "2.4.1",
+                            "b-tree":                       "1.x",
+                            "cadence":                      "1.x",
+                            "constrain":                    "1.x",
+                            "mkdirp":                       "0.5.1",
+                            "mvcc":                         "1.x",
+                            "pair":                         "1.x",
+                            "reactor":                      "1.x",
+                            "rimraf":                       "2.5.1",
+                            "sequester":                    "1.x",
+                            "timezone":                     "0.0.48",
+                            "vestibule":                    "1.x"
     },
     "devDependencies":
     {
-                        "arguable":             "1.x",
-                        "delta":                "1.x",
-                        "leveldown":            "1.4.4",
-                        "levelup":              "1.3.1",
-                        "proof":                "1.x",
-                        "seedrandom":           "2.4.2",
-                        "tap":                  "5.4.2"
+                            "arguable":                     "1.x",
+                            "delta":                        "1.x",
+                            "leveldown":                    "1.4.4",
+                            "levelup":                      "1.3.1",
+                            "proof":                        "1.x",
+                            "seedrandom":                   "2.4.2",
+                            "tap":                          "5.4.2"
     },
     "scripts":
     {
-                        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+                            "test": "proof platform win32 && proof test */*/*.t.js || t/test"
     }
 }
