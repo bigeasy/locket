@@ -163,6 +163,13 @@ function Locket (location) {
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
+Locket.prototype._serializeValue = function (value) {
+    if (value == null) {
+        return ''
+    }
+    return AbstractLevelDOWN.prototype._serializeValue.call(this, value)
+}
+
 Locket.prototype._shouldMergeBranch = function () {
     return this._cursors[0].page.items.length >= this._stageBranchSize
 }
