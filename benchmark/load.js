@@ -34,7 +34,7 @@ var runner = cadence(function (async, program) {
     var start, insert, gather
     var file = path.join(__dirname, 'tmp', 'put'), db, records = []
     var o = { createIfMissing: true }
-    if (!program.param.leveldown) {
+    if (!program.ultimate.leveldown) {
         o.db = require('..')
     }
     var batches = []
