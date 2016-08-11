@@ -41,7 +41,7 @@
                             "arguable":                     "3.1.x",
                             "delta":                        "1.1.x",
                             "leveldown":                    "1.4.6",
-                            "levelup":                      "1.3.1",
+                            "levelup":                      "1.3.2",
                             "proof":                        "1.0.x",
                             "seedrandom":                   "2.4.2",
                             "tap":                          "5.4.2"
