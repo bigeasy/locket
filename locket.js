@@ -34,7 +34,6 @@ var ok   = require('assert')
 
 // Modules for file operations. We use `strftime` to create date stamped file
 // names.
-var tz      = require('timezone')
 var fs      = require('fs')
 var path    = require('path')
 var mkdirp  = require('mkdirp')
@@ -475,8 +474,9 @@ Locket.prototype._amalgamate = cadence(function (async) {
             this._merging = null
         })
     }, function () {
+        var stamp = new Date().toISOString().replace(/[T.:]/g, '-').replace('Z', '')
         var from = path.join(this.location, 'merging')
-        var to = path.join(this.location, 'archive', tz(Date.now(), '%F-%H-%M-%S-%3N'))
+        var to = path.join(this.location, 'archive', stamp)
         // TODO Note that archive and stage need to be on same file system.
         async(function () {
             fs.rename(from, to, async())
