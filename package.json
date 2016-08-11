@@ -30,7 +30,7 @@
                             "mkdirp":                       "0.5.1",
                             "mvcc":                         "1.0.x",
                             "pair":                         "1.0.x",
-                            "reactor":                      "1.0.x",
+                            "reactor":                      "2.2.x",
                             "rimraf":                       "2.5.4",
                             "sequester":                    "1.0.x",
                             "timezone":                     "0.0.48",
