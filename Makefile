@@ -84,7 +84,7 @@ index.html: index.md
 	    node node_modules/.bin/edify highlight --select '.lang-javascript' --language 'javascript') < $< > $@
 
 clean:
-	rm $(sources)
+	rm -f $(sources)
 
 serve: node_modules/.bin/serve
 	node_modules/.bin/serve -p 4000

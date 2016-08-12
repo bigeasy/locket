@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>locket.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+
+    <ul class="sections">
+
+          <li id="title">
+              <div class="annotation">
+                  <h1>locket.js</h1>
+              </div>
+          </li>
+
+
+
+        <li id="section-1">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">module</span>.exports = Locke
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>In case you forgot, Alan. You’ve finished a rewrite. You no longer have many
+different staging trees, you only have one staging tree and it is not a
+tree, it is simply a log, a b-tree with only one leaf. When it is time to
+merge, it is renamed and then it is merged. Thus there is the primary tree,
+the staging log and possibly a merging log. There are, therefore, only two
+extra cursors in addition to the primary tree, and they can always be read
+pretty much directly using an Advance iterator, instead of having to traverse
+them as if they where actual trees.</p>
+<p>We have no way of vacuuming the primary tree at this point.</p>
+<p><em>Note:</em></p>
+<p>Please curb your compulsion to refactor the upstream libraries any further.</p>
+<p>You thought long and hard about this. You are not getting smarter.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-3">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Modules for storage and concurrency.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> sequester         = <span class="hljs-built_in">require</span>(<span class="hljs-string">'sequester'</span>)
+<span class="hljs-keyword">var</span> Strata            = <span class="hljs-built_in">require</span>(<span class="hljs-string">'b-tree'</span>)
+<span class="hljs-keyword">var</span> BinaryFramer      = <span class="hljs-built_in">require</span>(<span class="hljs-string">'b-tree/frame/binary'</span>)
+<span class="hljs-keyword">var</span> AbstractLevelDOWN = <span class="hljs-built_in">require</span>(<span class="hljs-string">'abstract-leveldown'</span>).AbstractLevelDOWN
+<span class="hljs-keyword">var</span> AbstractIterator  = <span class="hljs-built_in">require</span>(<span class="hljs-string">'abstract-leveldown'</span>).AbstractIterator
+<span class="hljs-keyword">var</span> Reactor           = <span class="hljs-built_in">require</span>(<span class="hljs-string">'reactor'</span>)
+<span class="hljs-keyword">var</span> Vestibule         = <span class="hljs-built_in">require</span>(<span class="hljs-string">'vestibule'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-4">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Inheritence.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> util = <span class="hljs-built_in">require</span>(<span class="hljs-string">'util'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-5">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Invariants.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> ok   = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-6">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Modules for file operations. We use <code>strftime</code> to create date stamped file
+names.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> fs      = <span class="hljs-built_in">require</span>(<span class="hljs-string">'fs'</span>)
+<span class="hljs-keyword">var</span> path    = <span class="hljs-built_in">require</span>(<span class="hljs-string">'path'</span>)
+<span class="hljs-keyword">var</span> mkdirp  = <span class="hljs-built_in">require</span>(<span class="hljs-string">'mkdirp'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-7">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Cadence for asynchornous control flow.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> cadence = <span class="hljs-built_in">require</span>(<span class="hljs-string">'cadence'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-8">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>TODO: Move into <code>mvcc</code> hash.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> pair = <span class="hljs-built_in">require</span>(<span class="hljs-string">'pair'</span>)
+<span class="hljs-keyword">var</span> constrain = <span class="hljs-built_in">require</span>(<span class="hljs-string">'constrain'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-9">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Modules for implementation of MVCC on top of Strata.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> mvcc = <span class="hljs-built_in">require</span>(<span class="hljs-string">'mvcc'</span>)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-10">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>A <code>Buffer</code> conversion function for values that are already <code>Buffer</code>s.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">echo</span> (<span class="hljs-params">object</span>) </span>{
+    <span class="hljs-keyword">return</span> objec
+}
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-11">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Create a map of options resolving the defaults and whatnot. Kind of a mess.
+TODO Need to pull some of this options navigation out of Pair, and here into
+Locket.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Options</span> (<span class="hljs-params">options, defaults</span>) </span>{
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> key <span class="hljs-keyword">in</span> options) {
+        <span class="hljs-keyword">this</span>[key] = options[key]
+    }
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> key <span class="hljs-keyword">in</span> defaults) {
+        <span class="hljs-keyword">if</span> (!(key <span class="hljs-keyword">in</span> options)) {
+            <span class="hljs-keyword">this</span>[key] = defaults[key]
+        }
+    }
+}
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-12">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Define the pluggable serialization components of our Strata trees.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> framer = <span class="hljs-keyword">new</span> BinaryFramer
+<span class="hljs-keyword">var</span> extractor = mvcc.revise.extractor(pair.extract);
+<span class="hljs-keyword">var</span> comparator = mvcc.revise.comparator(pair.compare)
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">keyComparator</span> (<span class="hljs-params">a, b</span>) </span>{ <span class="hljs-keyword">return</span> comparator(a.key, b.key) }
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-13">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>An implementation of the LevelDOWN <code>Iterator</code> object.</p>
+<p>The LevelUP interface allows you to specify encodings at both when you create
+the database and when you invoke one of it’s functions, so we need to pass
+two different sets of options to all the functions that consider the
+encoding.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Iterator</span> (<span class="hljs-params">db, options</span>) </span>{
+    <span class="hljs-keyword">var</span> preferences = [ options, db._options ]
+    options = <span class="hljs-keyword">new</span> Options(options, { keyAsBuffer: <span class="hljs-literal">true</span>, valueAsBuffer: <span class="hljs-literal">true</span> })
+
+    <span class="hljs-keyword">this</span>._db = db
+    <span class="hljs-keyword">this</span>._range = constrain(pair.compare, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">key</span>) </span>{
+        <span class="hljs-keyword">return</span> Buffer.isBuffer(key) ? key : pair.encoder.key(preferences).encode(key)
+    }, options)
+    <span class="hljs-keyword">this</span>._versions = <span class="hljs-keyword">this</span>._db._snapshot()
+    <span class="hljs-keyword">this</span>._decoders = {
+        key: options.keyAsBuffer ? echo : pair.encoder.key(preferences).decode,
+        value: options.valueAsBuffer ? echo : pair.encoder.value(preferences).decode
+    }
+}
+util.inherits(Iterator, AbstractIterator)
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-14">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Our LevelUP <code>Iterator</code> implementation is a wrapper around the internal
+iterator that merges our Strata b-tree with one or two logs where we are
+gathering new batch operations. See the <code>Locket._internalIterator</code> method for
+a description of how we compose an amalgamated MVCC iterator from the MVCC
+iterator modules.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-15">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Iterator.prototype._next = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
+    <span class="hljs-keyword">this</span>._db._checkError()
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-16">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Create an iteterator using <code>Locket._internalIterator</code> if one does no
+already exist.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._iterator) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._iterator
+        }
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._db._internalIterator(<span class="hljs-keyword">this</span>._range, <span class="hljs-keyword">this</span>._versions, <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">iterator</span>) </span>{
+            <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                iterator.next(<span class="hljs-keyword">async</span>())
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">more</span>) </span>{
+                <span class="hljs-keyword">this</span>._done = !more
+                <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._iterator = iterator
+            })
+        })
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">iterator</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-17">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>We use the asynchornous <code>next</code> method to move from page to page and
+the system <code>get</code> method to move from item to item within the page. We
+loop until <code>get</code> returns an item or <code>next</code> returns <code>false</code> indicating
+that there are no more items.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> loop = <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._done) {
+                <span class="hljs-keyword">return</span> [ loop.break ]
+            }
+            <span class="hljs-keyword">var</span> item = <span class="hljs-keyword">this</span>._iterator.get()
+            <span class="hljs-keyword">if</span> (item) {
+                <span class="hljs-keyword">return</span> [ loop.break, <span class="hljs-keyword">this</span>._decoders.key(item.record.key),
+                                     <span class="hljs-keyword">this</span>._decoders.value(item.record.value) ]
+            }
+            <span class="hljs-keyword">this</span>._iterator.next(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">more</span>) </span>{
+            <span class="hljs-keyword">this</span>._done = !more
+        })()
+    })
+})
+
+Iterator.prototype._end = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">callback</span>) </span>{
+    <span class="hljs-keyword">this</span>._iterator.unlock(callback)
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Locket</span> (<span class="hljs-params">location</span>) </span>{
+    <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Locket)) <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Locket(location)
+    AbstractLevelDOWN.call(<span class="hljs-keyword">this</span>, location)
+    <span class="hljs-keyword">this</span>._rotating = sequester.createLock()
+    <span class="hljs-keyword">this</span>._append = sequester.createLock()
+    <span class="hljs-keyword">this</span>._cursors = []
+    <span class="hljs-keyword">this</span>._appending = []
+    <span class="hljs-keyword">this</span>._primaryLeafSize = <span class="hljs-number">1024</span>
+    <span class="hljs-keyword">this</span>._primaryBranchSize = <span class="hljs-number">1024</span>
+    <span class="hljs-keyword">this</span>._stageLeafSize = <span class="hljs-number">1024</span>
+    <span class="hljs-keyword">this</span>._stageBranchSize = <span class="hljs-number">1024</span>
+    <span class="hljs-keyword">this</span>._reactor = <span class="hljs-keyword">new</span> Reactor({ object: <span class="hljs-keyword">this</span>, method: <span class="hljs-string">'_doubleCheck'</span> })
+    <span class="hljs-keyword">this</span>.merged = <span class="hljs-keyword">new</span> Vestibule
+}
+util.inherits(Locket, AbstractLevelDOWN)
+
+Locket.prototype._serializeValue = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">value</span>) </span>{
+    <span class="hljs-keyword">if</span> (value == <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">''</span>
+    }
+    <span class="hljs-keyword">return</span> AbstractLevelDOWN.prototype._serializeValue.call(<span class="hljs-keyword">this</span>, value)
+}
+
+Locket.prototype._shouldMergeBranch = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">0</span>].page.items.length &gt;= <span class="hljs-keyword">this</span>._stageBranchSize
+}
+
+Locket.prototype._tryCatchKeep = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, attempt</span>) </span>{
+    <span class="hljs-keyword">async</span>([<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        attempt.call(<span class="hljs-keyword">this</span>, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">error</span>) </span>{
+        <span class="hljs-keyword">this</span>._error = error
+    }])
+})
+
+Locket.prototype._checkError = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._error) {
+        <span class="hljs-keyword">var</span> error = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'balance error'</span>)
+        error.cause = <span class="hljs-keyword">this</span>._error
+        <span class="hljs-keyword">throw</span> error
+    }
+}
+
+Locket.prototype._check = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._shouldMergeBranch()) {
+        <span class="hljs-keyword">this</span>._reactor.check()
+    }
+}
+
+Locket.prototype._doubleCheck = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._shouldMergeBranch()) {
+        <span class="hljs-keyword">this</span>._tryCatchKeep(<span class="hljs-keyword">this</span>._merge, <span class="hljs-keyword">async</span>())
+    }
+})
+
+Locket.prototype._versionMarker = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{
+    <span class="hljs-keyword">this</span>._versions[entry.header[<span class="hljs-number">0</span>]] = !! entry.header[<span class="hljs-number">1</span>]
+    <span class="hljs-keyword">this</span>._version = <span class="hljs-built_in">Math</span>.max(+entry.header[<span class="hljs-number">0</span>], <span class="hljs-keyword">this</span>._version)
+}
+
+Locket.prototype._openStrataWithCursor = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, name, create, versionMarker</span>) </span>{
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._openStrata(name, create, versionMarker, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">strata</span>) </span>{
+        <span class="hljs-keyword">if</span> (strata) {
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-18">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>force load of the one page to load transcations.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            strata.iterator(strata.left, <span class="hljs-keyword">async</span>())
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> []
+        }
+    })
+})
+
+Locket.prototype._openStrata = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, name, create, versionMarker</span>) </span>{
+    <span class="hljs-keyword">var</span> strata
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        fs.readdir(path.join(<span class="hljs-keyword">this</span>.location, name), <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">files</span>) </span>{
+        <span class="hljs-keyword">if</span> (files.length || create) {
+            <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                strata = <span class="hljs-keyword">this</span>[<span class="hljs-string">'_'</span> + name] = <span class="hljs-keyword">new</span> Strata({
+                    directory: path.join(<span class="hljs-keyword">this</span>.location, name),
+                    framer: framer,
+                    serializers: pair.serializers,
+                    deserializers: pair.deserializers,
+                    extractor: extractor,
+                    comparator: comparator,
+                    writeStage: <span class="hljs-string">'leaf'</span>,
+                    userRecordHandler: versionMarker || <span class="hljs-literal">null</span>
+                })
+                <span class="hljs-keyword">if</span> (files.length) {
+                    strata.open(<span class="hljs-keyword">async</span>())
+                } <span class="hljs-keyword">else</span> {
+                    strata.create(<span class="hljs-keyword">async</span>())
+                }
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">return</span> [ strata ]
+            })
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> []
+        }
+    })
+})
+
+Locket.prototype._open = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, options</span>) </span>{
+    <span class="hljs-keyword">var</span> exists = <span class="hljs-literal">true</span>
+    <span class="hljs-keyword">this</span>._options = options
+    <span class="hljs-keyword">this</span>._versions = { <span class="hljs-number">0</span>: <span class="hljs-literal">true</span> }
+    <span class="hljs-keyword">this</span>._version = <span class="hljs-number">0</span>
+    <span class="hljs-keyword">var</span> marker = <span class="hljs-keyword">this</span>._versionMarker.bind(<span class="hljs-keyword">this</span>)
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> readdir = <span class="hljs-keyword">async</span>([<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            fs.readdir(<span class="hljs-keyword">this</span>.location, <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-regexp">/^ENOENT$/</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">error</span>) </span>{
+            <span class="hljs-keyword">if</span> (options.createIfMissing == <span class="hljs-literal">null</span> || options.createIfMissing) {
+                exists = <span class="hljs-literal">false</span>
+                <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                    mkdirp(<span class="hljs-keyword">this</span>.location, <span class="hljs-keyword">async</span>())
+                }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                    <span class="hljs-keyword">return</span> [ readdir.continue ]
+                })
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'does not exist'</span>)
+            }
+        }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">files</span>) </span>{
+            <span class="hljs-keyword">return</span> [ readdir.break, files ]
+        })()
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">files</span>) </span>{
+        <span class="hljs-keyword">if</span> (exists &amp;&amp; options.errorIfExists) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Locket database already exists'</span>)
+        }
+        <span class="hljs-keyword">var</span> subdirs = [ <span class="hljs-string">'archive'</span>, <span class="hljs-string">'merging'</span>, <span class="hljs-string">'primary'</span>, <span class="hljs-string">'staging'</span> ]
+        <span class="hljs-keyword">if</span> (exists) {
+            files = files.filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">file</span>) </span>{ <span class="hljs-keyword">return</span> file[<span class="hljs-number">0</span>] != <span class="hljs-string">'.'</span> }).sort()
+            <span class="hljs-keyword">if</span> (!files.length) {
+                exists = <span class="hljs-literal">false</span>
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-19">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>TODO Not a very clever recover, something might be in the mids
+of a rotation.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!subdirs.every(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">file</span>) </span>{ <span class="hljs-keyword">return</span> files.shift() == file }) || files.length) {
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'not a Locket datastore'</span>)
+            }
+        }
+        <span class="hljs-keyword">if</span> (!exists) {
+            <span class="hljs-keyword">async</span>.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">dir</span>) </span>{
+                fs.mkdir(path.join(<span class="hljs-keyword">this</span>.location, dir), <span class="hljs-keyword">async</span>())
+            })(subdirs)
+        }
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._openStrata(<span class="hljs-string">'primary'</span>, <span class="hljs-literal">true</span>, <span class="hljs-literal">null</span>, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._openStrataWithCursor(<span class="hljs-string">'staging'</span>, <span class="hljs-literal">true</span>, <span class="hljs-keyword">this</span>._versionMarker.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cursor</span>) </span>{
+        <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">0</span>] = cursor
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._isOpened = <span class="hljs-literal">true</span>
+        <span class="hljs-keyword">this</span>._operations = <span class="hljs-number">0</span>
+        <span class="hljs-keyword">this</span>._mergeRequests = <span class="hljs-number">0</span>
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._openStrataWithCursor(<span class="hljs-string">'merging'</span>, <span class="hljs-literal">false</span>, <span class="hljs-keyword">this</span>._versionMarker.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cursor</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-20">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>TODO Use Snafu to distrupt a merge and then open. Or maybe this
+is a special case requireing intervention from a utility.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (cursor) {
+                <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">1</span>] = cursor
+                <span class="hljs-keyword">this</span>._amalgamate(<span class="hljs-keyword">async</span>())
+            }
+        })
+    })
+})
+
+Locket.prototype._snapshot = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">var</span> versions = {}
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> key <span class="hljs-keyword">in</span> <span class="hljs-keyword">this</span>._versions) {
+        versions[key] = <span class="hljs-literal">true</span>
+    }
+    <span class="hljs-keyword">return</span> versions
+}
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-21">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Iteration of the database requires merging the results from the deep storage
+b-tree and the one or two staging logs.</p>
+<p>We do this by creating a merged Homogonize iterator across the b-tree and the
+logs. This is an iteartor that takes one or more iterators and advances
+through. It will advance each iterator and then when it is advanced, i
+returns the least value of each of the three iterators (or greatest value if
+iteration is reversed.)</p>
+<p>We then use the versioned iterator from the Designate module which will
+select the key/value pair for a key that has the greatest committed version.</p>
+<p>Finally we need to respect the properties given a user when creating an
+external iterator; start, stop, greater than, less than, greater than or
+equal to, less than or equal to. We use a Dilute iterator to select out only
+records that have not been deleted and that match the user’s range critera.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-22">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Locket.prototype._internalIterator = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, range, versions</span>) </span>{
+    <span class="hljs-keyword">var</span> version = range.direction == <span class="hljs-string">'forward'</span> ? <span class="hljs-number">0</span> : <span class="hljs-built_in">Math</span>.MAX_VALUE
+    <span class="hljs-keyword">var</span> key = range.key ? { value: range.key, version: version } : <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        mvcc.riffle[range.direction](<span class="hljs-keyword">this</span>._primary, key, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">iterator</span>) </span>{
+        <span class="hljs-keyword">var</span> sheaf = <span class="hljs-keyword">this</span>._staging.sheaf
+        <span class="hljs-keyword">var</span> advances = <span class="hljs-keyword">this</span>._cursors.map(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cursor</span>) </span>{
+            <span class="hljs-keyword">if</span> (range.key) {
+                <span class="hljs-keyword">var</span> index = sheaf.find(cursor.page, key, <span class="hljs-number">0</span>)
+                <span class="hljs-keyword">if</span> (index &lt; <span class="hljs-number">0</span>) {
+                    index = range.direction == <span class="hljs-string">'forward'</span> ? ~index : ~index - <span class="hljs-number">1</span>
+                } <span class="hljs-comment">/* else if (!range.inclusive) {
+                    index += range.direction == 'forward' ? 1 : -1
+                } */</span>
+                <span class="hljs-keyword">return</span> mvcc.advance[range.direction](keyComparator, cursor.page.items, index)
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">return</span> mvcc.advance[range.direction](keyComparator, cursor.page.items)
+            }
+        })
+        <span class="hljs-keyword">var</span> homogenize = mvcc.homogenize[range.direction](comparator, advances.concat(iterator))
+        <span class="hljs-keyword">var</span> designate = mvcc.designate[range.direction](pair.compare, versions, {}, homogenize)
+        <span class="hljs-keyword">var</span> dilute = mvcc.dilute(designate, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">item</span>) </span>{
+            <span class="hljs-keyword">if</span> (item.record.operation == <span class="hljs-string">'del'</span>) {
+                <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>
+            }
+            <span class="hljs-keyword">return</span> range.valid(item.key.value)
+        })
+        <span class="hljs-keyword">return</span> dilute
+    })
+})
+
+Locket.prototype._iterator = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">options</span>) </span>{
+    <span class="hljs-keyword">this</span>._checkError()
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Iterator(<span class="hljs-keyword">this</span>, options)
+}
+
+Locket.prototype._get = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, key, options</span>) </span>{
+    <span class="hljs-keyword">this</span>._checkError()
+    options = <span class="hljs-keyword">new</span> Options(options, { asBuffer: <span class="hljs-literal">true</span> })
+    <span class="hljs-keyword">if</span> (!Buffer.isBuffer(key)) {
+        key = pair.encoder.key([ options, <span class="hljs-keyword">this</span>._options ]).encode(key)
+    }
+    <span class="hljs-keyword">var</span> iterator = <span class="hljs-keyword">this</span>._iterator({ start: key, limit: <span class="hljs-number">1</span> })
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        iterator.next(<span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">$key, value</span>) </span>{
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            iterator.end(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">if</span> ($key &amp;&amp; value &amp;&amp; pair.compare($key, key) == <span class="hljs-number">0</span>) {
+                <span class="hljs-keyword">if</span> (!options.asBuffer) {
+                    value = pair.encoder.value([ options, <span class="hljs-keyword">this</span>._options ]).decode(value)
+                }
+                <span class="hljs-keyword">return</span> [ value ]
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'NotFoundError: not found'</span>)
+            }
+        })
+    })
+})
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-23">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>TODO i’ve lost track of why there are only two in the <code>_cursors</code> array.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Locket.prototype._rotate = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._rotating.exclude(<span class="hljs-keyword">async</span>())
+    }, [<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._rotating.unlock()
+    }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">0</span>].unlock(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._staging.close(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            fs.rename(path.join(<span class="hljs-keyword">this</span>.location, <span class="hljs-string">'staging'</span>),
+                      path.join(<span class="hljs-keyword">this</span>.location, <span class="hljs-string">'merging'</span>), <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._openStrataWithCursor(<span class="hljs-string">'merging'</span>, <span class="hljs-literal">false</span>, <span class="hljs-keyword">this</span>._versionMarker.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">merging</span>) </span>{
+            <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                fs.mkdir(path.join(<span class="hljs-keyword">this</span>.location, <span class="hljs-string">'staging'</span>), <span class="hljs-keyword">async</span>())
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._openStrataWithCursor(<span class="hljs-string">'staging'</span>, <span class="hljs-literal">true</span>, <span class="hljs-keyword">this</span>._versionMarker.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">async</span>())
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">staging</span>) </span>{
+                <span class="hljs-keyword">this</span>._cursors = [ staging, merging ]
+            })
+        })
+    })
+})
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-24">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>TODO What makes me think that all of these entries are any good? In fact, if
+we’ve failed while writing a log, then loading the leaf is going to start to
+play the entries of the failed transaction. We need a player that is going to
+save up the entries, and then play them as batches, if the batch has a
+comment record attached to it. Then we know that our log here is indeed the
+latest and greatest.</p>
+<p>Another problem is that the code below will insert the records with their
+logged version, instead of converting those verisons to zero.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Locket.prototype._amalgamate = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> iterator
+        iterator = mvcc.advance.forward(<span class="hljs-literal">null</span>, <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">1</span>].page.items)
+        iterator = mvcc.designate.forward(pair.compare, <span class="hljs-keyword">this</span>._snapshot(), {}, iterator)
+        iterator = mvcc.twiddle(iterator, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">item</span>) </span>{
+            <span class="hljs-keyword">return</span> {
+                key: {
+                    value: item.key.value,
+                    version: <span class="hljs-number">0</span>
+                },
+                record: {
+                    key: item.record.key,
+                    value: item.record.value,
+                    operation: item.record.operation,
+                    version: <span class="hljs-number">0</span>
+                }
+            }
+        })
+        mvcc.splice(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">incoming, existing</span>) </span>{
+            <span class="hljs-keyword">return</span> incoming.record.operation == <span class="hljs-string">'put'</span> ? <span class="hljs-string">'insert'</span> : <span class="hljs-string">'delete'</span>
+        }, <span class="hljs-keyword">this</span>._primary, iterator, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> merging = <span class="hljs-keyword">this</span>._cursors.pop()
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            merging.unlock(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._merging.close(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._merging = <span class="hljs-literal">null</span>
+        })
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> stamp = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().toISOString().replace(<span class="hljs-regexp">/[T.:]/g</span>, <span class="hljs-string">'-'</span>).replace(<span class="hljs-string">'Z'</span>, <span class="hljs-string">''</span>)
+        <span class="hljs-keyword">var</span> <span class="hljs-keyword">from</span> = path.join(<span class="hljs-keyword">this</span>.location, <span class="hljs-string">'merging'</span>)
+        <span class="hljs-keyword">var</span> to = path.join(<span class="hljs-keyword">this</span>.location, <span class="hljs-string">'archive'</span>, stamp)
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-25">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>TODO Note that archive and stage need to be on same file system.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            fs.rename(<span class="hljs-keyword">from</span>, to, <span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-26">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>TODO rimraf the archive file if we’re not preserving the archive</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        })
+    })
+})
+
+Locket.prototype._merge = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
+    <span class="hljs-keyword">var</span> merged = {}
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._rotate(<span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._amalgamate(<span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>.merged.notify()
+    })
+})
+
+Locket.prototype._put = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">key, value, options, callback</span>) </span>{
+    <span class="hljs-keyword">this</span>._batch([{ type: <span class="hljs-string">'put'</span>, key: key, value: value }], options, callback)
+}
+
+Locket.prototype._del = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">key, options, callback</span>) </span>{
+    <span class="hljs-keyword">this</span>._batch([{ type: <span class="hljs-string">'del'</span>, key: key }], options, callback)
+}
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-27">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>TODO Give up on finalizers here, or else make them fire per Cadence.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Locket.prototype._write = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, array, options</span>) </span>{
+    <span class="hljs-keyword">var</span> version = ++<span class="hljs-keyword">this</span>._version
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._append.share(<span class="hljs-keyword">async</span>())
+    }, [<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._append.unlock()
+    }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> properties = [ options, <span class="hljs-keyword">this</span>._options ]
+        <span class="hljs-keyword">var</span> sheaf = <span class="hljs-keyword">this</span>._staging.sheaf, page = <span class="hljs-keyword">this</span>._cursors[<span class="hljs-number">0</span>].page
+        <span class="hljs-keyword">var</span> appender = <span class="hljs-keyword">this</span>._appender
+        <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>._appender) {
+            appender = <span class="hljs-keyword">this</span>._appender = <span class="hljs-keyword">this</span>._staging.logger.createAppender(page)
+        }
+        <span class="hljs-keyword">this</span>._appending.push(version) <span class="hljs-comment">// TODO Convince yourself there's no race condition</span>
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-28">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>TODO Add a count of locks?</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        appender.writeUserRecord([ version ])
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-29">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>TODO You use Advance around different sorts of things, so that when
+you merge it is already exploded, and here you explode as if it was
+coming off the file, so the extractor used with Advance will only
+need to return the key. Figure out why this was confusing and
+document it, or accept that it will always confuse you when you come
+back to this.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = array.length; i &lt; I; i++) {
+            <span class="hljs-keyword">var</span> entry = array[i]
+            <span class="hljs-keyword">var</span> value = entry.value == <span class="hljs-literal">null</span> ? <span class="hljs-string">''</span> : entry.value
+            <span class="hljs-keyword">var</span> record = pair.record(entry.key, value, entry.type, version, properties)
+            <span class="hljs-keyword">var</span> key = extractor(record)
+            <span class="hljs-keyword">var</span> index = sheaf.find(page, key, <span class="hljs-number">0</span>)
+            <span class="hljs-keyword">var</span> replace = <span class="hljs-number">0</span>
+            <span class="hljs-keyword">if</span> (index &lt; <span class="hljs-number">0</span>) {
+                index = ~index
+            } <span class="hljs-keyword">else</span> {
+                replace = <span class="hljs-number">1</span>
+                appender.writeDelete(index)
+            }
+            <span class="hljs-keyword">var</span> heft = appender.writeInsert(index, record).hef
+            page.splice(index, replace, { key: key, record: record, heft: heft })
+        }
+        appender.writeUserRecord([ version, <span class="hljs-number">1</span> ])
+    })
+})
+
+Locket.prototype._batch = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, array, options</span>) </span>{
+    <span class="hljs-keyword">this</span>._checkError()
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._rotating.share(<span class="hljs-keyword">async</span>())
+    }, [<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">this</span>._rotating.unlock()
+    }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">stage</span>) </span>{
+        <span class="hljs-keyword">this</span>._write(array, options, <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>._flushing) {
+            <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._flushing = <span class="hljs-literal">true</span>
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._append.exclude(<span class="hljs-keyword">async</span>())
+            }, [<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._flushing = <span class="hljs-literal">false</span>
+                <span class="hljs-keyword">this</span>._append.unlock()
+            }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._appender.close(<span class="hljs-keyword">async</span>())
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                <span class="hljs-keyword">this</span>._appender = <span class="hljs-literal">null</span>
+                <span class="hljs-keyword">this</span>._appending.splice(<span class="hljs-number">0</span>, <span class="hljs-keyword">this</span>._appending.length).forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">version</span>) </span>{
+                    <span class="hljs-keyword">this</span>._versions[version] = <span class="hljs-literal">true</span>
+                }, <span class="hljs-keyword">this</span>)
+                <span class="hljs-keyword">this</span>._check()
+            })
+        }
+    })
+})
+
+Locket.prototype._approximateSize = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, from, to</span>) </span>{
+    <span class="hljs-keyword">this</span>._checkError()
+    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> range = constrain(pair.compare, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">key</span>) </span>{
+            <span class="hljs-keyword">return</span> Buffer.isBuffer(key) ? key : pair.encoder.key([]).encode(key)
+        }, { gte: <span class="hljs-keyword">from</span>, lte: to })
+        <span class="hljs-keyword">this</span>._internalIterator(range, <span class="hljs-keyword">this</span>._snapshot(), <span class="hljs-keyword">async</span>())
+    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">iterator</span>) </span>{
+        <span class="hljs-keyword">var</span> approximateSize = <span class="hljs-number">0</span>
+        <span class="hljs-keyword">async</span>([<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            iterator.unlock(<span class="hljs-keyword">async</span>())
+        }], <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">var</span> loop = <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+                iterator.next(<span class="hljs-keyword">async</span>())
+            }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">more</span>) </span>{
+                <span class="hljs-keyword">if</span> (more) {
+                    <span class="hljs-keyword">var</span> item
+                    <span class="hljs-keyword">while</span> (item = iterator.get()) {
+                        approximateSize += item.hef
+                    }
+                } <span class="hljs-keyword">else</span> {
+                    <span class="hljs-keyword">return</span> [ loop.break, approximateSize ]
+                }
+            })()
+        })
+    })
+})
+
+Locket.prototype._close = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, operations</span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._isOpened) {
+        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._primary.close(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">async</span>.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cursor</span>) </span>{
+                cursor.unlock(<span class="hljs-keyword">async</span>())
+            })(<span class="hljs-keyword">this</span>._cursors)
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._staging.close(<span class="hljs-keyword">async</span>())
+        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">this</span>._isOpened = <span class="hljs-literal">false</span>
+        })
+    }
+})
+
+</pre></div></div>
+
+        </li>
+
+    </ul>
+  </div>
+</body>
+</html>
