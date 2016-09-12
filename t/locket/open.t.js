@@ -1,4 +1,4 @@
-require('proof')(7, require('cadence')(prove))
+require('proof/redux')(7, require('cadence')(prove))
 
 function prove (async, assert) {
     var path = require('path')
