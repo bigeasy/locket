@@ -21,7 +21,7 @@
     },
     "dependencies":
     {
-                            "abstract-leveldown":           "2.6.0",
+                            "abstract-leveldown":           "2.6.x",
                             "b-tree":                       "1.0.x",
                             "cadence":                      "1.0.x",
                             "constrain":                    "1.0.x",
