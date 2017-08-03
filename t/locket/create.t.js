@@ -1,4 +1,4 @@
-require('proof/redux')(2, prove)
+require('proof')(2, prove)
 
 function prove (assert) {
     var Locket = require('../..')
