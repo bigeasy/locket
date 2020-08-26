@@ -21,31 +21,31 @@
     },
     "dependencies":
     {
-                            "abstract-leveldown":           "2.6.x",
-                            "b-tree":                       "1.0.x",
-                            "cadence":                      "1.0.x",
-                            "constrain":                    "1.0.x",
-                            "mkdirp":                       "0.5.1",
-                            "mvcc":                         "1.0.x",
-                            "pair":                         "1.0.x",
-                            "reactor":                      "2.2.x",
-                            "rimraf":                       "2.5.4",
-                            "sequester":                    "1.0.x",
-                            "vestibule":                    "1.3.x"
+                            "abstract-leveldown":           "6.3.0",
+                            "b-tree":                       "2.0.0-alpha.16",
+                            "constrain":                    "2.0.0-alpha.0",
+                            "dilute":                       "2.0.0-alpha.2",
+                            "designate":                    "2.0.0-alpha.3",
+                            "destructible":                 "^6.2.4",
+                            "extant":                       "^1.0.20",
+                            "homogenize":                   "2.0.0-alpha.2",
+                            "riffle":                       "2.0.0-alpha.7",
+                            "prospective":                  "0.2.0",
+                            "rescue":                       "7.0.0-alpha.0",
+                            "rimraf":                       "3.0.2",
+                            "twiddle":                      "2.0.0-alpha.3"
     },
     "devDependencies":
     {
-                            "arguable":                     "5.2.x",
-                            "delta":                        "1.2.x",
-                            "leveldown":                    "1.4.6",
-                            "levelup":                      "1.3.2",
-                            "proof":                        "3.0.x",
-                            "seedrandom":                   "2.4.2",
-                            "tap":                          "6.3.0"
+                            "arguable":                     "^12.0.1",
+                            "leveldown":                    "5.6.0",
+                            "levelup":                      "4.4.0",
+                            "proof":                        "^9.0.2",
+                            "tape":                         "5.0.1"
     },
     "main":                 "locket",
     "scripts":
     {
-                            "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+                            "test": "proof test/*/*.t.js"
     }
 }

@@ -1,19 +1,13 @@
-require('proof')(2, prove)
+require('proof')(2, okay => {
+    const path = require('path')
+    const AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 
-function prove (assert) {
-    var Locket = require('../..')
-    var locket
+    const Locket = require('../..')
 
     try {
-        locket = new Locket
+        const locket = Locket(path.join('t', 'tmp'))
+        okay(locket instanceof AbstractLevelDOWN, 'is a leveldown implementation')
     } catch (e) {
         assert(e.message, 'constructor requires at least a location argument')
     }
-
-    var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
-    var path = require('path')
-
-    locket = Locket(path.join('t', 'tmp'))
-
-    assert(locket instanceof AbstractLevelDOWN, 'is a leveldown implementation')
-}
+})
