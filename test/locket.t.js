@@ -8,9 +8,9 @@ require('proof')(5, async okay =>  {
     const callback = require('prospective/callback')
     const rimraf = require('rimraf')
 
-    const Locket = require('../..')
+    const Locket = require('..')
 
-    const tmp = path.join(__dirname, '../tmp')
+    const tmp = path.join(__dirname, './tmp')
     const location = path.join(tmp, 'put')
 
     await callback(callback => rimraf(location, callback))
