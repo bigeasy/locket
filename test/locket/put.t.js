@@ -1,4 +1,4 @@
-require('proof')(2, async okay =>  {
+require('proof')(4, async okay =>  {
     const path = require('path')
     const fs = require('fs')
 
@@ -15,7 +15,7 @@ require('proof')(2, async okay =>  {
 
     await callback(callback => rimraf(location, callback))
 
-    const locket = new Locket(destructible, location)
+    const locket = Locket(destructible, location)
     await callback(callback => locket.open({ createIfMissing: true }, callback))
 
     await callback(callback => locket.put('a', 'z', callback))
@@ -44,6 +44,17 @@ require('proof')(2, async okay =>  {
             isBuffer: true,
             value: 'z'
         }, 'reopen')
+    }
+
+    {
+        const iterator = locket._iterator({
+            keys: true, values: true, keyAsBuffer: false, valueAsBuffer: false
+        })
+        const [ key, value ] = await callback(callback => iterator.next(callback))
+        okay({ key, value }, { key: 'a', value: 'z' }, 'next')
+        const ended = await callback(callback => iterator.next(callback))
+        okay(ended, [], 'ended')
+        await callback(callback => iterator.end(callback))
     }
 
     await callback(callback => locket.close(callback))

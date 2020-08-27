@@ -68,6 +68,8 @@ class Paginator {
         this._constraint = constraint
         this._keyAsBuffer = constraint.options.keyAsBuffer
         this._valueAsBuffer = constraint.options.valueAsBuffer
+        this._keys = constraint.options.keys
+        this._values = constraint.options.values
         this._items = []
         this._index = 0
     }
@@ -77,10 +79,14 @@ class Paginator {
             if (this._items.length != this._index) {
                 const item = this._items[this._index++]
                 if (this._constraint.included(item)) {
-                    return [
-                        this._keyAsBuffer ? item.parts[1] : item.parts[1].toString(),
-                        this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
-                    ]
+                    const result = new Array(2)
+                    if (this._keys) {
+                        result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
+                    }
+                    if (this._values) {
+                        result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
+                    }
+                    return result
                 }
             } else {
                 const next = await this._iterator.next()
@@ -107,14 +113,12 @@ class Paginator {
 // encoding.
 
 // TODO No call to super!
-function Iterator (db, iterator, stages, options) {
+function Iterator (db, options) {
     AbstractIterator.call(this, db)
-    this._stages = stages
-    this._iterator = iterator
-    this._release = release
-    this._constraint = constrain(options)
+    this._constraint = constrain(Buffer.compare, encode, options)
     this._db = db
     this._versions = this._db._snapshot()
+    this._paginator = this._db._paginator(this._constraint, this._versions)
 }
 util.inherits(Iterator, AbstractIterator)
 
@@ -130,8 +134,9 @@ Iterator.prototype._next = callbackify(function () {
 })
 
 Iterator.prototype._seek = function (target) {
-    this._paginator.release()
+    const paginator = this._paginator
     this._paginator = this.db._paginator(target, this._options)
+    paginator.release()
 }
 
 Iterator.prototype._end = function (callback) {
@@ -140,7 +145,7 @@ Iterator.prototype._end = function (callback) {
 }
 
 function Locket (destructible, location, options = {}) {
-    if (!(this instanceof Locket)) return new Locket(location)
+    if (!(this instanceof Locket)) return new Locket(destructible, location, options)
     AbstractLevelDOWN.call(this)
     this.location = location
     this._destructible = destructible
@@ -220,7 +225,8 @@ Locket.prototype._open = callbackify(async function (options) {
     let exists = true
     this._options = options
     this._versions = { 0: true }
-    this._version = 0n
+    // Must be one, version zero must only come out of the primary tree.
+    this._version = 1n
     const files = await (async () => {
         for (;;) {
             try {
@@ -316,16 +322,26 @@ Locket.prototype._snapshot = function () {
 // records that have not been deleted and that match the user's range critera.
 
 //
-Locket.prototype._paginator = function (constraint) {
+Locket.prototype._paginator = function (constraint, versions) {
     this._stages.forEach(stage => stage.readers++)
-
-    const versions = this._snapshot()
-    const version = constraint.direction == 'forward' ? 0n : 0xffffffffffffffffn
-    const key = constraint.key ? { value: constraint.key, version: version } : null
 
     const { direction, inclusive } = constraint
 
-    const riffle = mvcc.riffle[direction](this._primary, key.value, 32, inclusive)
+    // If we are exclusive we will use a maximum version going forward and a
+    // minimum version going backward, puts us where we'd expect to be if we
+    // where doing exclusive with the external key only.
+    const version = direction == 'forward'
+        ? inclusive ? 0n : 0xffffffffffffffffn
+        : inclusive ? 0xffffffffffffffffn : 0n
+    // TODO Not sure what no key plus exclusive means.
+    const versioned = constraint.key != null
+        ? { value: constraint.key, version: version }
+        : direction == 'forward'
+            ? Strata.MIN
+            : Strata.MAX
+    const key = typeof versioned == 'symbol' ? versioned : versioned.value
+
+    const riffle = mvcc.riffle[direction](this._primary, key, 32, inclusive)
     const primary = mvcc.twiddle(riffle, item => {
         // TODO Looks like I'm in the habit of adding extra stuff, meta stuff,
         // so the records, so go back and ensure that I'm allowing this,
@@ -340,7 +356,7 @@ Locket.prototype._paginator = function (constraint) {
     })
 
     const stages = this._stages.map(stage => {
-        return mvcc.riffle[direction](stage.strata, key, 32, inclusive)
+        return mvcc.riffle[direction](stage.strata, versioned, 32, inclusive)
     })
     const homogenize = mvcc.homogenize[direction](Buffer.compare, stages.concat(primary))
     const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
@@ -360,10 +376,10 @@ Locket.prototype._iterator = function (options) {
 
 // TODO Maybe just leave this?
 Locket.prototype._get = callbackify(async function (key, options) {
-    const constraint = constrain(key, encode, {
-        gte: key, keyAsBuffer: true, valueAsBuffer: true
+    const constraint = constrain(Buffer.compare, encode, {
+        gte: key, keys: true, values: true, keyAsBuffer: true, valueAsBuffer: true
     })
-    const paginator = this._paginator(constraint)
+    const paginator = this._paginator(constraint, this._snapshot())
     // TODO How do I reuse Cursor.found out of Riffle et. al.? Eh, no good way
     // since we have to advance, merge, dilute, etc. anyway.
     const next = await paginator.next()
