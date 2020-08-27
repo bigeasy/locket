@@ -26,6 +26,8 @@ const Cache = require('b-tree/cache')
 const AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 const AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
+const callbackify = require('prospective/callbackify')
+
 const packet = require('./packet')
 
 // Inheritence.
@@ -57,21 +59,6 @@ const mvcc = {
 // encodings.
 function encode (buffer) {
     return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
-}
-
-function callbackify (f) {
-    return function (...vargs) {
-        const callback = vargs.pop()
-        f.apply(this, vargs)
-            .then(vargs => {
-                if (vargs.length == 0) {
-                    callback()
-                } else {
-                    callback.apply(null, [ null ].concat(vargs))
-                }
-            })
-            .catch(error => callback(error))
-    }
 }
 
 class Paginator {
