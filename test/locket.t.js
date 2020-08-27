@@ -15,7 +15,17 @@ require('proof')(6, async okay =>  {
 
     await callback(callback => rimraf(location, callback))
 
-    const locket = Locket(destructible, location)
+    const locket = Locket(destructible, location, {
+        primary: {
+            leaf: { split: 64, merge: 32 },
+            branch: { split: 64, merge: 32 },
+        },
+        stage: {
+            max: 128,
+            leaf: { split: 64, merge: 32 },
+            branch: { split: 64, merge: 32 },
+        }
+    })
     await callback(callback => locket.open({ createIfMissing: true }, callback))
 
     await callback(callback => locket.put('a', 'z', callback))
@@ -42,15 +52,19 @@ require('proof')(6, async okay =>  {
         }, 'put')
     }
 
+    await callback(callback => locket.del('a', callback))
+
     {
         const test = []
         try {
-            await callback(callback => locket.get('z', callback))
+            await callback(callback => locket.get('a', callback))
         } catch (error) {
             test.push(error.message)
         }
         okay(test, [ 'NotFoundError: not found' ], 'get not found')
     }
+
+    await callback(callback => locket.put(Buffer.from('a'), Buffer.from('z'), callback))
 
     await callback(callback => locket.close(callback))
 

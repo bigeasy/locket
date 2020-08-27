@@ -152,16 +152,32 @@ function Locket (destructible, location, options = {}) {
     this._cache = new Cache
     this._primary = null
     this._stages = []
-    this._maxStageCount = 1024
-    const leaf = coalesce(options.leaf, {})
-    this._leaf = {
-        split: coalesce(leaf.split, 4096),
-        merge: coalesce(leaf.merge, 2048)
-    }
-    const branch = coalesce(options.branch, {})
-    this._branch = {
-        split: coalesce(leaf.split, 4096),
-        merge: coalesce(leaf.merge, 2048)
+    const primary = coalesce(options.primary, {})
+    const stage = coalesce(options.stage, {})
+    const leaf = { stage: coalesce(stage.leaf, {}), primary: coalesce(primary.leaf, {}) }
+    const branch = { stage: coalesce(stage.branch, {}), primary: coalesce(primary.branch, {}) }
+    this._maxStageCount = coalesce(stage.max, 1024)
+    this._strata = {
+        stage: {
+            leaf: {
+                split: coalesce(leaf.stage.split, 4096),
+                merge: coalesce(leaf.stage.merge, 2048)
+            },
+            branch: {
+                split: coalesce(branch.stage.split, 4096),
+                merge: coalesce(branch.stage.merge, 2048)
+            }
+        },
+        primary: {
+            leaf: {
+                split: coalesce(leaf.primary.split, 4096),
+                merge: coalesce(leaf.primary.merge, 2048)
+            },
+            branch: {
+                split: coalesce(branch.primary.split, 4096),
+                merge: coalesce(branch.primary.merge, 2048)
+            }
+        }
     }
 }
 util.inherits(Locket, AbstractLevelDOWN)
@@ -175,8 +191,8 @@ Locket.prototype._newStage = function (directory, options = {}) {
     const branch = coalesce(options.leaf, 4096)
     const strata = new Strata(this._destructible.ephemeral([ 'stage', options.directory ]), {
         directory: directory,
-        branch: { split: branch, merge: 0 },
-        leaf: { split: leaf, merge: 0 },
+        branch: this._strata.stage.branch,
+        leaf: this._strata.stage.leaf,
         cache: this._cache,
         serializer: {
             key: {
@@ -196,10 +212,10 @@ Locket.prototype._newStage = function (directory, options = {}) {
                     const { version, method, count } = parts[0]
                     const buffer = Buffer.alloc(packet.meta.sizeof(parts[0]))
                     packet.meta.serialize(parts[0], buffer, 0)
-                    return [ buffer, parts[1], parts[2] ]
+                    return [ buffer ].concat(parts.slice(1))
                 },
                 deserialize: function (parts) {
-                    return [ packet.meta.parse(parts[0], 0), parts[1], parts[2] ]
+                    return [ packet.meta.parse(parts[0], 0) ].concat(parts.slice(1))
                 }
             }
         },
@@ -259,13 +275,13 @@ Locket.prototype._open = callbackify(async function (options) {
             await fs.mkdir(path.join(this.location, dir), { recursive: true })
         }
     }
-    this._primary = new Strata(this._destructible, {
+    this._primary = new Strata(this._destructible.ephemeral('primary'), {
         directory: path.join(this.location, 'primary'),
         cache: this._cache,
         comparator: Buffer.compare,
         serializer: 'buffer',
-        leaf: { merge: this._leaf.merge, split: this._leaf.split },
-        branch: { merge: this._branch.merge, split: this._branch.split }
+        branch: this._strata.primary.branch,
+        leaf: this._strata.primary.leaf
     })
     if ((await fs.readdir(path.join(this.location, 'primary'))).length != 0) {
         await this._primary.open()
@@ -361,7 +377,7 @@ Locket.prototype._paginator = function (constraint, versions) {
     const homogenize = mvcc.homogenize[direction](Buffer.compare, stages.concat(primary))
     const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
     const dilute = mvcc.dilute(designate, item => {
-        if (item.parts[0].method == 'remove') {
+        if (item.parts[0].header.method == 'del') {
             return -1
         }
         return constraint.included(item.key.value) ? 0 : -1
@@ -384,6 +400,7 @@ Locket.prototype._get = callbackify(async function (key, options) {
     // since we have to advance, merge, dilute, etc. anyway.
     const next = await paginator.next()
     paginator.release()
+    console.log('>>>', next)
     if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
         return [ options.asBuffer ? next[1] : next[1].toString() ]
     }
