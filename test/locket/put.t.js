@@ -1,4 +1,4 @@
-require('proof')(4, async okay =>  {
+require('proof')(5, async okay =>  {
     const path = require('path')
     const fs = require('fs')
 
@@ -29,6 +29,16 @@ require('proof')(4, async okay =>  {
             isBuffer: true,
             value: 'z'
         }, 'put')
+    }
+
+    {
+        const test = []
+        try {
+            await callback(callback => locket.get('z', callback))
+        } catch (error) {
+            test.push(error.message)
+        }
+        okay(test, [ 'NotFoundError: not found' ], 'get not found')
     }
 
     await callback(callback => locket.close(callback))

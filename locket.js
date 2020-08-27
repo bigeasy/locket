@@ -240,9 +240,6 @@ Locket.prototype._open = callbackify(async function (options) {
             }
         }
     }) ()
-    if (exists && options.errorIfExists) {
-        throw new Error('Locket database already exists')
-    }
     const subdirs = [ 'primary', 'staging' ]
     if (exists) {
         const sorted = files.filter(file => file[0] != '.').sort()
@@ -253,6 +250,9 @@ Locket.prototype._open = callbackify(async function (options) {
         } else if (!subdirs.every(file => sorted.shift() == file) || sorted.length) {
             throw new Error('not a Locket datastore')
         }
+    }
+    if (exists && options.errorIfExists) {
+        throw new Error('Locket database already exists')
     }
     if (!exists) {
         for (const dir of subdirs) {
