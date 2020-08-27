@@ -49,7 +49,8 @@ const mvcc = {
     dilute: require('dilute'),
     homogenize: require('homogenize'),
     riffle: require('riffle'),
-    twiddle: require('twiddle')
+    twiddle: require('twiddle'),
+    splice: require('splice')
 }
 
 // TODO Let's see if we can get throught his without having to worry about
@@ -225,7 +226,7 @@ Locket.prototype._newStage = function (directory, options = {}) {
             return [ object.value, object.version ]
         })
     })
-    return { strata, versions: {}, writers: 0, readers: 0, count: 0 }
+    return { strata, path: directory, versions: { 0: true }, writers: 0, readers: 0, count: 0 }
 }
 
 Locket.prototype._filestamp = function () {
@@ -233,6 +234,9 @@ Locket.prototype._filestamp = function () {
 }
 
 Locket.prototype._open = callbackify(async function (options) {
+    // TODO What is the behavior if you close while opening, or open while
+    // closing?
+    this._isOpen = true
     // TODO Hoist.
     let exists = true
     this._options = options
@@ -283,16 +287,16 @@ Locket.prototype._open = callbackify(async function (options) {
     } else {
         await this._primary.create()
     }
-    const staging = path.join(this.location, 'staging'), versions = {}, counts = {}
+    const staging = path.join(this.location, 'staging')
     for (const file of await fs.readdir(staging)) {
-        const stage = this._newStage(path.join(staging, file))
+        const stage = this._newStage(path.join(staging, file)), counts = {}
         await stage.strata.open()
-        for await (const items of riffle.forward(stage.stata, Strata.MIN)) {
+        for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
             for (const item of items) {
-                const version = item.key.version
+                const version = item.parts[0].version
                 if (counts[version] == null) {
-                    assert(item.key.count != null)
-                    counts[version] = item.key.count
+                    assert(item.parts[0].header.count != null)
+                    counts[version] = item.parts[0].header.count
                 }
                 if (0 == --counts[version]) {
                     stage.versions[version] = true
@@ -300,7 +304,8 @@ Locket.prototype._open = callbackify(async function (options) {
             }
         }
         this._stages.push(stage)
-        await this._amalagmate()
+        await this._amalgamate()
+        await this._unstage()
     }
     const directory = path.join(staging, this._filestamp())
     await fs.mkdir(directory, { recursive: true })
@@ -341,17 +346,17 @@ Locket.prototype._paginator = function (constraint) {
 
     const { direction, inclusive } = constraint
 
-    const riffle = mvcc.riffle[direction](this._primary, key, 32, inclusive)
+    const riffle = mvcc.riffle[direction](this._primary, key.value, 32, inclusive)
     const primary = mvcc.twiddle(riffle, item => {
         // TODO Looks like I'm in the habit of adding extra stuff, meta stuff,
         // so the records, so go back and ensure that I'm allowing this,
         // forwarding the meta information.
         return {
             key: { version: 0n, value: item.parts[0] },
-            parts: [ item.parts[0], item.parts[1], {
+            parts: [{
                 header: { method: 'insert', count: 0 },
                 version: 0n
-            }]
+            }, item.parts[0], item.parts[1]]
         }
     })
 
@@ -390,16 +395,20 @@ Locket.prototype._get = callbackify(async function (key, options) {
     throw new Error('NotFoundError: not found')
 })
 
+Locket.prototype._unstage = async function () {
+    const stage = this._stages.pop()
+    await stage.strata.close()
+    // TODO Implement Strata.options.directory.
+    await fs.rmdir(stage.path, { recursive: true })
+    this._maybeUnstage()
+}
+
 Locket.prototype._maybeUnstage = function () {
-    assert(this._stages.length > 1)
-    const stage = this._stages[this._stages.length - 1]
-    if (stage.amalgamated && stage.readers == 0) {
-        this._destructible.ephemeral([ 'unstage', stage.path ], async () => {
-            await stage.close()
-            // TODO Implement Strata.options.directory.
-            await callback(callback => rimraf(stage.strata.options.directory, callback))
-            this._maybeUnstage()
-        })
+    if (this._stages.length > 1) {
+        const stage = this._stages[this._stages.length - 1]
+        if (stage.amalgamated && stage.readers == 0) {
+            this._destructible.ephemeral([ 'unstage', stage.path ], this._unstage())
+        }
     }
 }
 
@@ -413,17 +422,16 @@ Locket.prototype._maybeUnstage = function () {
 // Another problem is that the code below will insert the records with their
 // logged version, instead of converting those verisons to zero.
 Locket.prototype._amalgamate = async function () {
-    assert(this._stages.length > 1)
     const stage = this._stages[this._stages.length - 1]
     assert.equal(stage.writers, 0)
     let iterator = null
     const riffle = mvcc.riffle.forward(stage.strata, Strata.MIN)
     // TODO Track versions in stage.
-    const designate = mvcc.designate.forward(comparator, riffle, stage.versions)
+    const designate = mvcc.designate.forward(Buffer.compare, riffle, stage.versions)
     await mvcc.splice(item => {
-        return item.parts[0].method == 'insert' ? item.parts.slice(1) : null
-    }, this._primary, iterator)
-    this.stage.amalgamated = true
+        return item.parts[0].header.method == 'put' ? item.parts.slice(1) : null
+    }, this._primary, designate)
+    stage.amalgamated = true
     this._maybeUnstage()
 }
 
@@ -468,6 +476,7 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
         }
         stage.count++
     }
+    cursor.release()
     await Strata.flush(writes)
     stage.versions[version] = this._versions[version] = true
     stage.writers--
@@ -488,6 +497,7 @@ Locket.prototype._maybeAmalgamate = function () {
         // Enqueue the amalgamation or else fire and forget.
         this._destructible.ephemeral('amalgamate', async () => {
             await this._amalgamate()
+            this._maybeUnstage()
             this._maybeAmalgamate()
         })
     }
@@ -570,11 +580,11 @@ Locket.prototype._approximateSize = callbackify(async function (from, to) {
 Locket.prototype._close = callbackify(async function () {
     if (this._isOpen) {
         this._isOpen = false
-        await this._batches.drain()
         await this._primary.close()
-        for (const stage of this._stages) {
-            await stage.strata.close()
+        while (this._stages.length != 0) {
+            await this._stages.shift().strata.close()
         }
+        this._cache.purge(0)
     }
     return []
 })

@@ -22,7 +22,7 @@
     "dependencies":
     {
                             "abstract-leveldown":           "6.3.0",
-                            "b-tree":                       "2.0.0-alpha.16",
+                            "b-tree":                       "2.0.0-alpha.18",
                             "constrain":                    "2.0.0-alpha.0",
                             "dilute":                       "2.0.0-alpha.2",
                             "designate":                    "2.0.0-alpha.3",
@@ -33,6 +33,7 @@
                             "prospective":                  "0.2.0",
                             "rescue":                       "7.0.0-alpha.0",
                             "rimraf":                       "3.0.2",
+                            "splice":                       "3.0.0-alpha.2",
                             "twiddle":                      "2.0.0-alpha.3"
     },
     "devDependencies":

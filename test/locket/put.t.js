@@ -1,4 +1,4 @@
-require('proof')(1, async okay =>  {
+require('proof')(2, async okay =>  {
     const path = require('path')
     const fs = require('fs')
 
@@ -19,15 +19,32 @@ require('proof')(1, async okay =>  {
     await callback(callback => locket.open({ createIfMissing: true }, callback))
 
     await callback(callback => locket.put('a', 'z', callback))
-    const [ value ] = await callback(callback => locket.get('a', callback))
 
-    okay({
-        isBuffer: Buffer.isBuffer(value),
-        value: value.toString()
-    }, {
-        isBuffer: true,
-        value: 'z'
-    }, 'get')
+    {
+        const [ value ] = await callback(callback => locket.get('a', callback))
+        okay({
+            isBuffer: Buffer.isBuffer(value),
+            value: value.toString()
+        }, {
+            isBuffer: true,
+            value: 'z'
+        }, 'put')
+    }
+
+    await callback(callback => locket.close(callback))
+
+    await callback(callback => locket.open({ createIfMissing: true }, callback))
+
+    {
+        const [ value ] = await callback(callback => locket.get('a', callback))
+        okay({
+            isBuffer: Buffer.isBuffer(value),
+            value: value.toString()
+        }, {
+            isBuffer: true,
+            value: 'z'
+        }, 'reopen')
+    }
 
     await callback(callback => locket.close(callback))
 })
