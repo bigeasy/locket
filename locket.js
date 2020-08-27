@@ -55,14 +55,6 @@ const mvcc = {
 
 // TODO Let's see if we can get throught his without having to worry about
 // encodings.
-
-// Define the pluggable serialization components of our Strata trees.
-function compare (left, right) {
-    return Buffer.compare(left, right)
-}
-
-function keyComparator (a, b) { return comparator(a.key, b.key) }
-
 function encode (buffer) {
     return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
 }
@@ -500,68 +492,6 @@ Locket.prototype._maybeAmalgamate = function () {
             this._maybeUnstage()
             this._maybeAmalgamate()
         })
-    }
-}
-
-Locket.prototype._dequeue = async function ({ body }) {
-    switch (body.method) {
-    case 'batch': {
-            const version = ++this._version
-            const count = body.operations.length
-            const stage = this._stages[0]
-            let cursor = Strata.nullCursor(), index
-            for (const operation of body.operations) {
-                const key = {
-                    method: operations.type == 'put' ? 'insert' : 'remove',
-                    value: operation.key,
-                    count: body.operations.length,
-                    version: version
-                }
-                index = cursor.indexOf(key, cursor.page.ghosts)
-                if (index == null) {
-                    cursor.release()
-                    cursor = await (stage.strata.search(key)).get()
-                    index = cursor.index
-                    assert(!cursor.found)
-                } else {
-                    assert(index < 0)
-                    index = ~index
-                }
-                if (operation.type == 'put') {
-                    cursor.insert(key, operation.value)
-                } else {
-                    cursor.insert(key, Buffer.alloc(0))
-                }
-                stage.count++
-            }
-            cursor.release()
-            this._versions[version] = true
-            this._maybeAmalgamate()
-        }
-        break
-    // TODO Need some sort of promise on Destructible that is an all is good
-    // promise. Gets difficult again, doesn't it. When Destructible exits, it
-    // changes the promise from one that doesn't resolve to anything to one that
-    // resolves to the error set by Destructible.
-    // TODO No more switching back and forth. Use a timestamp for the file name
-    // and create a new file amalgamate the old file. What are you supposed to
-    // do about any outstanding iterations?
-    case 'amalgamate': {
-            // Can now go down to zero when all iterators are released. Oops, no
-            // wait for `_amalgamate` to finish, duh.
-            this._stages[0].holds--
-            // Enqueue the amalgamation or else fire and forget.
-            this._destructible.ephemeral('amalgamate', async () => {
-                await this._amalgamate(this._stages[0])
-                this._maybeAmalgamate()
-            })
-            // Create a new timestamped staging tree.
-            await fs.abunch()
-            // Add to stages.
-            this._stages.unshift({
-            })
-        }
-        break
     }
 }
 
