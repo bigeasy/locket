@@ -1,1 +1,0 @@
-require('./harness')('leveldown', 'args')

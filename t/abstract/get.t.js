@@ -1,1 +1,0 @@
-require('./harness')('get', 'all')
