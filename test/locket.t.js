@@ -1,4 +1,4 @@
-require('proof')(5, async okay =>  {
+require('proof')(6, async okay =>  {
     const path = require('path')
     const fs = require('fs')
 
@@ -11,7 +11,7 @@ require('proof')(5, async okay =>  {
     const Locket = require('..')
 
     const tmp = path.join(__dirname, './tmp')
-    const location = path.join(tmp, 'put')
+    const location = path.join(tmp, 'locket')
 
     await callback(callback => rimraf(location, callback))
 
@@ -27,6 +27,17 @@ require('proof')(5, async okay =>  {
             value: value.toString()
         }, {
             isBuffer: true,
+            value: 'z'
+        }, 'put')
+    }
+
+    {
+        const [ value ] = await callback(callback => locket.get('a', { asBuffer: false }, callback))
+        okay({
+            type: typeof value,
+            value: value
+        }, {
+            type: 'string',
             value: 'z'
         }, 'put')
     }
