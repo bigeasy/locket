@@ -15,6 +15,8 @@ require('proof')(6, async okay =>  {
 
     await callback(callback => rimraf(location, callback))
 
+    new Locket(destructible, location)
+
     const locket = Locket(destructible, location, {
         primary: {
             leaf: { split: 64, merge: 32 },
