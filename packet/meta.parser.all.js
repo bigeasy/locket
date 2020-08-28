@@ -7,8 +7,9 @@ module.exports = function ({ $lookup }) {
                 let object = {
                     header: {
                         method: 0,
-                        count: 0
+                        index: 0
                     },
+                    count: 0,
                     version: 0n
                 }
 
@@ -21,7 +22,14 @@ module.exports = function ({ $lookup }) {
 
                 object.header.method = $lookup[0][$_ >>> 31 & 0x1]
 
-                object.header.count = $_ & 0x7fffffff
+                object.header.index = $_ & 0x7fffffff
+
+                object.count = (
+                    $buffer[$start++] << 24 |
+                    $buffer[$start++] << 16 |
+                    $buffer[$start++] << 8 |
+                    $buffer[$start++]
+                ) >>> 0
 
                 object.version =
                     BigInt($buffer[$start++]) << 56n |

@@ -3,7 +3,8 @@ module.exports = function ({ $lookup }) {
         object: function () {
             return function ($buffer, $start) {
                 let object = {
-                    version: 0n
+                    version: 0n,
+                    index: 0
                 }
 
                 object.version =
@@ -15,6 +16,13 @@ module.exports = function ({ $lookup }) {
                     BigInt($buffer[$start++]) << 16n |
                     BigInt($buffer[$start++]) << 8n |
                     BigInt($buffer[$start++])
+
+                object.index = (
+                    $buffer[$start++] << 24 |
+                    $buffer[$start++] << 16 |
+                    $buffer[$start++] << 8 |
+                    $buffer[$start++]
+                ) >>> 0
 
                 return object
             }

@@ -21,7 +21,7 @@ require('proof')(6, async okay =>  {
             branch: { split: 64, merge: 32 },
         },
         stage: {
-            max: 128,
+            max: 128 * 8,
             leaf: { split: 64, merge: 32 },
             branch: { split: 64, merge: 32 },
         }
@@ -90,6 +90,15 @@ require('proof')(6, async okay =>  {
         const ended = await callback(callback => iterator.next(callback))
         okay(ended, [], 'ended')
         await callback(callback => iterator.end(callback))
+    }
+
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('')
+
+    const put = alphabet.map(letter => { return { type: 'put', key: letter, value: letter } })
+    const del = alphabet.map(letter => { return { type: 'del', key: letter } })
+
+    for (let i = 0; i < 128; i++) {
+        await callback(callback => locket.batch(put.concat(del), callback))
     }
 
     await callback(callback => locket.close(callback))

@@ -11,6 +11,11 @@ module.exports = function ({ $lookup }) {
                 $buffer[$start++] = Number(object.version >> 8n & 0xffn)
                 $buffer[$start++] = Number(object.version & 0xffn)
 
+                $buffer[$start++] = object.index >>> 24 & 0xff
+                $buffer[$start++] = object.index >>> 16 & 0xff
+                $buffer[$start++] = object.index >>> 8 & 0xff
+                $buffer[$start++] = object.index & 0xff
+
                 return { start: $start, serialize: null }
             }
         } ()

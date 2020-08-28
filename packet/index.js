@@ -1,9 +1,9 @@
 const $lookup = { key: require('./key.lookup'), meta: require('./meta.lookup') }
 
 exports.key = {
-    sizeof: require('./key.sizeof'),
-    serialize: require('./key.serializer.all')({ $lookup: $lookup.key }),
-    parse: require('./key.parser.all')({ $lookup: $lookup.key })
+    sizeof: require('./key.sizeof').object,
+    serialize: require('./key.serializer.all')({ $lookup: $lookup.key }).object,
+    parse: require('./key.parser.all')({ $lookup: $lookup.key }).object
 }
 
 exports.meta = {

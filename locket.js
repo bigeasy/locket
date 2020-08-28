@@ -186,6 +186,10 @@ Locket.prototype._serializeKey = encode
 
 Locket.prototype._serializeValue = encode
 
+const comparator = ascension([ Buffer.compare, BigInt, Number ], function (object) {
+    return [ object.value, object.version, object.index ]
+})
+
 Locket.prototype._newStage = function (directory, options = {}) {
     const leaf = coalesce(options.leaf, 4096)
     const branch = coalesce(options.leaf, 4096)
@@ -196,20 +200,19 @@ Locket.prototype._newStage = function (directory, options = {}) {
         cache: this._cache,
         serializer: {
             key: {
-                serialize: function ({ version, value }) {
-                    const header = { version: version }
-                    const buffer = Buffer.alloc(key.sizeof(header))
-                    key.serialize(header, buffer, 0)
+                serialize: function ({ value, version, index }) {
+                    const header = { version, index }
+                    const buffer = Buffer.alloc(packet.key.sizeof(header))
+                    packet.key.serialize(header, buffer, 0)
                     return [ buffer, value ]
                 },
                 deserialize: function (parts) {
-                    const { version } = parse(parts[0], 0)
-                    return { version: version, value: parts[1] }
+                    const { version, index } = packet.key.parse(parts[0], 0)
+                    return { value: parts[1], version, index }
                 }
             },
             parts: {
                 serialize: function (parts) {
-                    const { version, method, count } = parts[0]
                     const buffer = Buffer.alloc(packet.meta.sizeof(parts[0]))
                     packet.meta.serialize(parts[0], buffer, 0)
                     return [ buffer ].concat(parts.slice(1))
@@ -220,11 +223,9 @@ Locket.prototype._newStage = function (directory, options = {}) {
             }
         },
         extractor: function (parts) {
-            return { value: parts[1], version: parts[0].version }
+            return { value: parts[1], version: parts[0].version, index: parts[0].header.index }
         },
-        comparator: ascension([ Buffer.compare, BigInt ], function (object) {
-            return [ object.value, object.version ]
-        })
+        comparator: comparator
     })
     return { strata, path: directory, versions: { 0: true }, writers: 0, readers: 0, count: 0 }
 }
@@ -296,8 +297,8 @@ Locket.prototype._open = callbackify(async function (options) {
             for (const item of items) {
                 const version = item.parts[0].version
                 if (counts[version] == null) {
-                    assert(item.parts[0].header.count != null)
-                    counts[version] = item.parts[0].header.count
+                    assert(item.parts[0].count != null)
+                    counts[version] = item.parts[0].count
                 }
                 if (0 == --counts[version]) {
                     stage.versions[version] = true
@@ -363,9 +364,9 @@ Locket.prototype._paginator = function (constraint, versions) {
         // so the records, so go back and ensure that I'm allowing this,
         // forwarding the meta information.
         return {
-            key: { version: 0n, value: item.parts[0] },
+            key: { value: item.parts[0], version: 0n, index: 0 },
             parts: [{
-                header: { method: 'insert', count: 0 },
+                header: { method: 'put' },
                 version: 0n
             }, item.parts[0], item.parts[1]]
         }
@@ -374,7 +375,7 @@ Locket.prototype._paginator = function (constraint, versions) {
     const stages = this._stages.map(stage => {
         return mvcc.riffle[direction](stage.strata, versioned, 32, inclusive)
     })
-    const homogenize = mvcc.homogenize[direction](Buffer.compare, stages.concat(primary))
+    const homogenize = mvcc.homogenize[direction](comparator, stages.concat(primary))
     const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
     const dilute = mvcc.dilute(designate, item => {
         if (item.parts[0].header.method == 'del') {
@@ -400,7 +401,6 @@ Locket.prototype._get = callbackify(async function (key, options) {
     // since we have to advance, merge, dilute, etc. anyway.
     const next = await paginator.next()
     paginator.release()
-    console.log('>>>', next)
     if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
         return [ options.asBuffer ? next[1] : next[1].toString() ]
     }
@@ -441,7 +441,10 @@ Locket.prototype._amalgamate = async function () {
     // TODO Track versions in stage.
     const designate = mvcc.designate.forward(Buffer.compare, riffle, stage.versions)
     await mvcc.splice(item => {
-        return item.parts[0].header.method == 'put' ? item.parts.slice(1) : null
+        return {
+            key: item.key.value,
+            parts: item.parts[0].header.method == 'put' ? item.parts.slice(1) : null
+        }
     }, this._primary, designate)
     stage.amalgamated = true
     this._maybeUnstage()
@@ -466,10 +469,10 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
     const version = ++this._version
     const count = batch.length
     const writes = {}
-    let cursor = Strata.nullCursor(), index = 0
+    let cursor = Strata.nullCursor(), index = 0, i = 0
     for (const operation of batch) {
         const { type: method, key: value } = operation, count = batch.length
-        const key = { value: encode(value), version }
+        const key = { value: encode(value), version, index: i }
         index = cursor.indexOf(key, cursor.page.ghosts)
         if (index == null) {
             cursor.release()
@@ -480,7 +483,7 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
             assert(index < 0)
             index = ~index
         }
-        const header = { header: { method, count }, version }
+        const header = { header: { method, index: i++ }, count, version }
         if (method == 'put') {
             cursor.insert(index, [ header, operation.key, operation.value ], writes)
         } else {
@@ -495,8 +498,10 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
     // A race to create the next stage, but the loser will merely create a stage
     // taht will be unused or little used.
     if (this._stages[0].count > this._maxStageCount) {
-        const next = this._createStage()
-        await next.create()
+        const directory = path.join(this.location, 'staging', this._filestamp())
+        await fs.mkdir(directory, { recursive: true })
+        const next = this._newStage(directory, {})
+        await next.strata.create()
         this._stages.unshift(next)
     }
     this._maybeAmalgamate()
@@ -504,8 +509,7 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
 })
 
 Locket.prototype._maybeAmalgamate = function () {
-    if (this._stages.length != 1 && this._stages[this._stages.length - 1].writing == 0) {
-        const stage = this._stages.pop()
+    if (this._stages.length != 1 && this._stages[this._stages.length - 1].writers == 0) {
         // Enqueue the amalgamation or else fire and forget.
         this._destructible.ephemeral('amalgamate', async () => {
             await this._amalgamate()
