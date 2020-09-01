@@ -148,7 +148,7 @@ function Locket (destructible, location, options = {}) {
     if (!(this instanceof Locket)) return new Locket(destructible, location, options)
     AbstractLevelDOWN.call(this)
     this.location = location
-    this._destructible = destructible
+    this._destructible = { root: destructible, strata: null, locket: null }
     this._cache = new Cache
     this._primary = null
     this._stages = []
@@ -193,12 +193,44 @@ const comparator = ascension([ Buffer.compare, BigInt, Number ], function (objec
 Locket.prototype._newStage = function (directory, options = {}) {
     const leaf = coalesce(options.leaf, 4096)
     const branch = coalesce(options.leaf, 4096)
-    const strata = new Strata(this._destructible.ephemeral([ 'stage', options.directory ]), {
+    const strata = new Strata(this._destructible.strata.ephemeral([ 'stage', options.directory ]), {
         directory: directory,
         branch: this._strata.stage.branch,
         leaf: this._strata.stage.leaf,
         cache: this._cache,
         serializer: {
+            key: {
+                serialize: function ({ value, version, index }) {
+                    const header = { version: version.toString(), index }
+                    const buffer = Buffer.from(JSON.stringify(header))
+                    return [ buffer, value ]
+                },
+                deserialize: function (parts) {
+                    const { version, index } = JSON.parse(parts[0].toString())
+                    return { value: parts[1], version: BigInt(version), index }
+                }
+            },
+            parts: {
+                serialize: function (parts) {
+                    const header = {
+                        header: {
+                            method: parts[0].header.method,
+                            index: parts[0].header.index
+                        },
+                        count: parts[0].count,
+                        version: parts[0].version.toString()
+                    }
+                    const buffer = Buffer.from(JSON.stringify(header))
+                    return [ buffer ].concat(parts.slice(1))
+                },
+                deserialize: function (parts) {
+                    const header = JSON.parse(parts[0].toString())
+                    header.version = BigInt(header.version)
+                    return [ header ].concat(parts.slice(1))
+                }
+            }
+        },
+        _serializer: {
             key: {
                 serialize: function ({ value, version, index }) {
                     const header = { version, index }
@@ -238,6 +270,8 @@ Locket.prototype._open = callbackify(async function (options) {
     // TODO What is the behavior if you close while opening, or open while
     // closing?
     this._isOpen = true
+    this._destructible.locket = this._destructible.root.ephemeral('locket')
+    this._destructible.strata = this._destructible.root.ephemeral('strata')
     // TODO Hoist.
     let exists = true
     this._options = options
@@ -276,7 +310,7 @@ Locket.prototype._open = callbackify(async function (options) {
             await fs.mkdir(path.join(this.location, dir), { recursive: true })
         }
     }
-    this._primary = new Strata(this._destructible.ephemeral('primary'), {
+    this._primary = new Strata(this._destructible.strata.durable('primary'), {
         directory: path.join(this.location, 'primary'),
         cache: this._cache,
         comparator: Buffer.compare,
@@ -291,6 +325,7 @@ Locket.prototype._open = callbackify(async function (options) {
     }
     const staging = path.join(this.location, 'staging')
     for (const file of await fs.readdir(staging)) {
+        console.log(file)
         const stage = this._newStage(path.join(staging, file)), counts = {}
         await stage.strata.open()
         for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
@@ -298,13 +333,19 @@ Locket.prototype._open = callbackify(async function (options) {
                 const version = item.parts[0].version
                 if (counts[version] == null) {
                     assert(item.parts[0].count != null)
+                    // console.log(version, item.parts[0].count)
                     counts[version] = item.parts[0].count
+                }
+                if (item.parts[0].version == 129n) {
+                    // console.log(item.parts[0].version, item.parts[0].header.method, item.parts[1].toString())
                 }
                 if (0 == --counts[version]) {
                     stage.versions[version] = true
                 }
             }
         }
+        //console.log(stage.versions, counts)
+        console.log('done')
         this._stages.push(stage)
         await this._amalgamate()
         await this._unstage()
@@ -411,15 +452,16 @@ Locket.prototype._unstage = async function () {
     const stage = this._stages.pop()
     await stage.strata.close()
     // TODO Implement Strata.options.directory.
+    console.log('unstage')
     await fs.rmdir(stage.path, { recursive: true })
     this._maybeUnstage()
 }
 
 Locket.prototype._maybeUnstage = function () {
-    if (this._stages.length > 1) {
+    if (this._isOpen && this._stages.length > 1) {
         const stage = this._stages[this._stages.length - 1]
         if (stage.amalgamated && stage.readers == 0) {
-            this._destructible.ephemeral([ 'unstage', stage.path ], this._unstage())
+            this._destructible.locket.ephemeral([ 'unstage', stage.path ], this._unstage())
         }
     }
 }
@@ -475,6 +517,15 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
         const key = { value: encode(value), version, index: i }
         index = cursor.indexOf(key, cursor.page.ghosts)
         if (index == null) {
+            console.log('re-descend', version, cursor.page.id)
+            const entry = await stage.strata._journalist.load('0.0')
+            console.log('!', entry.value.items)
+            entry.release()
+            if (cursor.page.items != null) {
+                for (const item of cursor.page.items) {
+                    console.log('>', item.key.value.toString(), item.key.version, item.key.index, item.parts[0].header.method)
+                }
+            }
             cursor.release()
             cursor = (await stage.strata.search(key)).get()
             index = cursor.index
@@ -483,7 +534,11 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
             assert(index < 0)
             index = ~index
         }
-        const header = { header: { method, index: i++ }, count, version }
+        const header = { header: { method, index: i }, count, version }
+        if (version == 124n) {
+            console.log(cursor.page.items[0].key.value.toString(), cursor.page.id, operation.type, operation.key.toString(), index, i)
+        }
+        i++
         if (method == 'put') {
             cursor.insert(index, [ header, operation.key, operation.value ], writes)
         } else {
@@ -491,9 +546,34 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
         }
         stage.count++
     }
+    let count_ = 0
+    for (const item of cursor.page.items) {
+        if (item.key.version == 129n) {
+            count_++
+            console.log(item.key.version, item.parts[0].header.method, item.key.value.toString())
+        }
+    }
+    console.log(count_)
     cursor.release()
     await Strata.flush(writes)
     stage.versions[version] = this._versions[version] = true
+        const counts = {}, versions = {}
+        for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
+            for (const item of items) {
+                const version = item.parts[0].version
+                if (counts[version] == null) {
+                    assert(item.parts[0].count != null)
+                    counts[version] = item.parts[0].count
+                }
+                if (item.parts[0].version == 129n) {
+                    console.log(item.parts[0].version, item.parts[0].header.method, item.parts[1].toString())
+                }
+                if (0 == --counts[version]) {
+                    versions[version] = true
+                }
+            }
+        }
+        console.log('>>>', version, counts, versions)
     stage.writers--
     // A race to create the next stage, but the loser will merely create a stage
     // taht will be unused or little used.
@@ -509,9 +589,9 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
 })
 
 Locket.prototype._maybeAmalgamate = function () {
-    if (this._stages.length != 1 && this._stages[this._stages.length - 1].writers == 0) {
+    if (this._isOpen && this._stages.length != 1 && this._stages[this._stages.length - 1].writers == 0) {
         // Enqueue the amalgamation or else fire and forget.
-        this._destructible.ephemeral('amalgamate', async () => {
+        this._destructible.locket.ephemeral('amalgamate', async () => {
             await this._amalgamate()
             this._maybeUnstage()
             this._maybeAmalgamate()
@@ -534,10 +614,13 @@ Locket.prototype._approximateSize = callbackify(async function (from, to) {
 Locket.prototype._close = callbackify(async function () {
     if (this._isOpen) {
         this._isOpen = false
+        this._destructible.locket.destroy()
+        await this._destructible.locket.destructed
         await this._primary.close()
         while (this._stages.length != 0) {
             await this._stages.shift().strata.close()
         }
+        await this._destructible.strata.destructed
         this._cache.purge(0)
     }
     return []

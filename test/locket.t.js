@@ -104,4 +104,7 @@ require('proof')(6, async okay =>  {
     }
 
     await callback(callback => locket.close(callback))
+
+    await callback(callback => locket.open({ createIfMissing: true }, callback))
+    await callback(callback => locket.close(callback))
 })
