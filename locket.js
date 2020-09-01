@@ -325,7 +325,6 @@ Locket.prototype._open = callbackify(async function (options) {
     }
     const staging = path.join(this.location, 'staging')
     for (const file of await fs.readdir(staging)) {
-        console.log(file)
         const stage = this._newStage(path.join(staging, file)), counts = {}
         await stage.strata.open()
         for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
@@ -345,7 +344,6 @@ Locket.prototype._open = callbackify(async function (options) {
             }
         }
         //console.log(stage.versions, counts)
-        console.log('done')
         this._stages.push(stage)
         await this._amalgamate()
         await this._unstage()
@@ -452,7 +450,6 @@ Locket.prototype._unstage = async function () {
     const stage = this._stages.pop()
     await stage.strata.close()
     // TODO Implement Strata.options.directory.
-    console.log('unstage')
     await fs.rmdir(stage.path, { recursive: true })
     this._maybeUnstage()
 }
@@ -511,69 +508,30 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
     const version = ++this._version
     const count = batch.length
     const writes = {}
-    let cursor = Strata.nullCursor(), index = 0, i = 0
+    let cursor = Strata.nullCursor(), found, index = 0, i = 0
     for (const operation of batch) {
         const { type: method, key: value } = operation, count = batch.length
         const key = { value: encode(value), version, index: i }
-        index = cursor.indexOf(key, cursor.page.ghosts)
-        if (index == null) {
-            console.log('re-descend', version, cursor.page.id)
-            const entry = await stage.strata._journalist.load('0.0')
-            console.log('!', entry.value.items)
-            entry.release()
-            if (cursor.page.items != null) {
-                for (const item of cursor.page.items) {
-                    console.log('>', item.key.value.toString(), item.key.version, item.key.index, item.parts[0].header.method)
-                }
+        for (;;) {
+            ; ({ index, found } = cursor.indexOf(key, cursor.page.ghosts))
+            if (index != null) {
+                break
             }
             cursor.release()
-            cursor = (await stage.strata.search(key)).get()
-            index = cursor.index
-            assert(!cursor.found)
-        } else {
-            assert(index < 0)
-            index = ~index
+            cursor = await stage.strata.search(key)
         }
         const header = { header: { method, index: i }, count, version }
-        if (version == 124n) {
-            console.log(cursor.page.items[0].key.value.toString(), cursor.page.id, operation.type, operation.key.toString(), index, i)
-        }
         i++
         if (method == 'put') {
-            cursor.insert(index, [ header, operation.key, operation.value ], writes)
+            cursor.insert(index, key, [ header, operation.key, operation.value ], writes)
         } else {
-            cursor.insert(index, [ header, operation.key ], writes)
+            cursor.insert(index, key, [ header, operation.key ], writes)
         }
         stage.count++
     }
-    let count_ = 0
-    for (const item of cursor.page.items) {
-        if (item.key.version == 129n) {
-            count_++
-            console.log(item.key.version, item.parts[0].header.method, item.key.value.toString())
-        }
-    }
-    console.log(count_)
     cursor.release()
     await Strata.flush(writes)
     stage.versions[version] = this._versions[version] = true
-        const counts = {}, versions = {}
-        for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
-            for (const item of items) {
-                const version = item.parts[0].version
-                if (counts[version] == null) {
-                    assert(item.parts[0].count != null)
-                    counts[version] = item.parts[0].count
-                }
-                if (item.parts[0].version == 129n) {
-                    console.log(item.parts[0].version, item.parts[0].header.method, item.parts[1].toString())
-                }
-                if (0 == --counts[version]) {
-                    versions[version] = true
-                }
-            }
-        }
-        console.log('>>>', version, counts, versions)
     stage.writers--
     // A race to create the next stage, but the loser will merely create a stage
     // taht will be unused or little used.
