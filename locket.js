@@ -87,6 +87,8 @@ class Paginator {
                         result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
                     }
                     return result
+                } else {
+                    return []
                 }
             } else {
                 const next = await this._iterator.next()
@@ -423,10 +425,7 @@ Locket.prototype._paginator = function (constraint, versions) {
     const homogenize = mvcc.homogenize[direction](comparator, riffles.concat(primary))
     const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
     const dilute = mvcc.dilute(designate, item => {
-        if (item.parts[0].header.method == 'del') {
-            return -1
-        }
-        return constraint.included(item.key.value) ? 0 : -1
+        return item.parts[0].header.method == 'del' ? -1 : 0
     })
 
     return new Paginator(dilute[Symbol.asyncIterator](), stages.slice(), constraint)
@@ -502,20 +501,17 @@ Locket.prototype._del = function (key, options, callback) {
     this._batch([{ type: 'del', key: key }], options, callback)
 }
 
-// Could use a header record. It would sort out to be less than all the user
-// records, so it wouldn't get in the way of a search, and we wouldn't have to
-// filter it. It does however mean at least two writes for every `put` or `del`
-// and I suspect that common usage is ingle `put` or `del`, so going to include
-// the count in ever record, it is only 32-bits.
-Locket.prototype._batch = callbackify(async function (batch, options) {
+Locket.prototype._meta = function (version, method, index, count) {
+    return { header: { method, index }, count, version }
+}
+
+Locket.prototype._merge = async function (version, operations, meta) {
     const stage = this._stages[0]
     stage.writers++
-    const version = ++this._version
-    const count = batch.length
     const writes = {}
     let cursor = Strata.nullCursor(), found, index = 0, i = 0
-    for (const operation of batch) {
-        const { type: method, key: value } = operation, count = batch.length
+    for (const operation of operations) {
+        const { type: method, key: value } = operation
         const key = { value: encode(value), version, index: i }
         for (;;) {
             ; ({ index, found } = cursor.indexOf(key, cursor.page.ghosts))
@@ -525,18 +521,18 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
             cursor.release()
             cursor = await stage.strata.search(key)
         }
-        const header = { header: { method, index: i }, count, version }
-        i++
+        const header = this._meta(version, method, i, meta)
         if (method == 'put') {
             cursor.insert(index, key, [ header, operation.key, operation.value ], writes)
         } else {
             cursor.insert(index, key, [ header, operation.key ], writes)
         }
         stage.count++
+        i++
     }
     cursor.release()
     await Strata.flush(writes)
-    stage.versions[version] = this._versions[version] = true
+    stage.versions[version] = true
     stage.writers--
     // A race to create the next stage, but the loser will merely create a stage
     // taht will be unused or little used.
@@ -548,6 +544,17 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
         this._stages.unshift(next)
     }
     this._maybeAmalgamate()
+}
+
+// Could use a header record. It would sort out to be less than all the user
+// records, so it wouldn't get in the way of a search, and we wouldn't have to
+// filter it. It does however mean at least two writes for every `put` or `del`
+// and I suspect that common usage is ingle `put` or `del`, so going to include
+// the count in ever record, it is only 32-bits.
+Locket.prototype._batch = callbackify(async function (batch, options) {
+    const version = ++this._version
+    this._versions[version] = true
+    await this._merge(version, batch, batch.length)
     return []
 })
 
