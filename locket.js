@@ -259,7 +259,11 @@ Locket.prototype._newStage = function (directory, options = {}) {
         },
         comparator: comparator
     })
-    return { strata, path: directory, versions: { 0: true }, writers: 0, readers: 0, count: 0 }
+    return {
+        strata, path: directory, versions: { 0: true },
+        appending: true, amalgamated: false,
+        writers: 0, readers: 0, count: 0
+    }
 }
 
 Locket.prototype._filestamp = function () {
@@ -379,7 +383,9 @@ Locket.prototype._snapshot = function () {
 
 //
 Locket.prototype._paginator = function (constraint, versions) {
-    this._stages.forEach(stage => stage.readers++)
+    const stages = this._stages.filter(stage => ! stage.amalgamated)
+
+    stages.forEach(stage => stage.readers++)
 
     const { direction, inclusive } = constraint
 
@@ -411,10 +417,10 @@ Locket.prototype._paginator = function (constraint, versions) {
         }
     })
 
-    const stages = this._stages.map(stage => {
+    const riffles = this._stages.map(stage => {
         return mvcc.riffle[direction](stage.strata, versioned, 32, inclusive)
     })
-    const homogenize = mvcc.homogenize[direction](comparator, stages.concat(primary))
+    const homogenize = mvcc.homogenize[direction](comparator, riffles.concat(primary))
     const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
     const dilute = mvcc.dilute(designate, item => {
         if (item.parts[0].header.method == 'del') {
@@ -423,7 +429,7 @@ Locket.prototype._paginator = function (constraint, versions) {
         return constraint.included(item.key.value) ? 0 : -1
     })
 
-    return new Paginator(dilute[Symbol.asyncIterator](), this._stages.slice(), constraint)
+    return new Paginator(dilute[Symbol.asyncIterator](), stages.slice(), constraint)
 }
 
 Locket.prototype._iterator = function (options) {
@@ -475,7 +481,6 @@ Locket.prototype._maybeUnstage = function () {
 Locket.prototype._amalgamate = async function () {
     const stage = this._stages[this._stages.length - 1]
     assert.equal(stage.writers, 0)
-    let iterator = null
     const riffle = mvcc.riffle.forward(stage.strata, Strata.MIN)
     // TODO Track versions in stage.
     const designate = mvcc.designate.forward(Buffer.compare, riffle, stage.versions)
@@ -535,7 +540,7 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
     stage.writers--
     // A race to create the next stage, but the loser will merely create a stage
     // taht will be unused or little used.
-    if (this._stages[0].count > this._maxStageCount) {
+    if (this._stages[0].count > this._maxStageCount && this._stages.length != 2) {
         const directory = path.join(this.location, 'staging', this._filestamp())
         await fs.mkdir(directory, { recursive: true })
         const next = this._newStage(directory, {})
@@ -547,13 +552,15 @@ Locket.prototype._batch = callbackify(async function (batch, options) {
 })
 
 Locket.prototype._maybeAmalgamate = function () {
-    if (this._isOpen && this._stages.length != 1 && this._stages[this._stages.length - 1].writers == 0) {
-        // Enqueue the amalgamation or else fire and forget.
-        this._destructible.locket.ephemeral('amalgamate', async () => {
-            await this._amalgamate()
-            this._maybeUnstage()
-            this._maybeAmalgamate()
-        })
+    if (this._isOpen && this._stages.length == 2) {
+        const stage = this._stages[this._stages.length - 1]
+        if (stage.appending && stage.writers == 0) {
+            this._destructible.locket.ephemeral('amalgamate', async () => {
+                await this._amalgamate()
+                this._maybeUnstage()
+                this._maybeAmalgamate()
+            })
+        }
     }
 }
 
