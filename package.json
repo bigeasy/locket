@@ -22,23 +22,18 @@
     "dependencies":
     {
                             "abstract-leveldown":           "6.3.0",
-                            "b-tree":                       "2.0.0-alpha.26",
+                            "amalgamate":                   "0.1.4",
+                            "b-tree":                       "2.0.0-alpha.31",
                             "constrain":                    "2.0.0-alpha.0",
-                            "dilute":                       "2.0.0-alpha.2",
-                            "designate":                    "2.0.0-alpha.3",
-                            "destructible":                 "^6.2.4",
+                            "destructible":                 "7.0.0-alpha.8",
                             "extant":                       "^1.0.20",
-                            "homogenize":                   "2.0.0-alpha.2",
-                            "riffle":                       "2.0.0-alpha.10",
+                            "riffle":                       "2.0.0-alpha.13",
                             "prospective":                  "0.3.0",
-                            "rescue":                       "7.0.0-alpha.0",
-                            "rimraf":                       "3.0.2",
-                            "splice":                       "3.0.0-alpha.4",
-                            "twiddle":                      "2.0.0-alpha.3"
+                            "rescue":                       "7.0.0-alpha.1",
+                            "rimraf":                       "3.0.2"
     },
     "devDependencies":
     {
-                            "arguable":                     "^12.0.1",
                             "leveldown":                    "5.6.0",
                             "levelup":                      "4.4.0",
                             "proof":                        "^9.0.2",
@@ -47,6 +42,6 @@
     "main":                 "locket",
     "scripts":
     {
-                            "test": "proof test/*.t.js"
+                            "test": "proof --timeout 7000 test/*.t.js"
     }
 }

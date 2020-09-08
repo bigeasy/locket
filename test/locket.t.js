@@ -10,8 +10,7 @@ require('proof')(6, async okay =>  {
 
     const Locket = require('..')
 
-    const tmp = path.join(__dirname, './tmp')
-    const location = path.join(tmp, 'locket')
+    const location = path.join(__dirname, 'tmp', 'locket')
 
     await callback(callback => rimraf(location, callback))
 
@@ -23,7 +22,7 @@ require('proof')(6, async okay =>  {
             branch: { split: 64, merge: 32 },
         },
         stage: {
-            max: 128 * 8,
+            max: 128,
             leaf: { split: 64, merge: 32 },
             branch: { split: 64, merge: 32 },
         }
@@ -51,7 +50,7 @@ require('proof')(6, async okay =>  {
         }, {
             type: 'string',
             value: 'z'
-        }, 'put')
+        }, 'get')
     }
 
     await callback(callback => locket.del('a', callback))

@@ -26,6 +26,10 @@ const Cache = require('b-tree/cache')
 const AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 const AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
+const Destructible = require('destructible')
+
+const Amalgamator = require('amalgamate')
+
 const callbackify = require('prospective/callbackify')
 
 const packet = require('./packet')
@@ -47,12 +51,7 @@ const rescue = require('rescue')
 const ascension = require('ascension')
 
 const mvcc = {
-    designate: require('designate'),
-    dilute: require('dilute'),
-    homogenize: require('homogenize'),
-    riffle: require('riffle'),
-    twiddle: require('twiddle'),
-    splice: require('splice')
+    riffle: require('riffle')
 }
 
 // TODO Let's see if we can get throught his without having to worry about
@@ -62,9 +61,8 @@ function encode (buffer) {
 }
 
 class Paginator {
-    constructor (iterator, stages, constraint) {
+    constructor (iterator, constraint) {
         this._iterator = iterator
-        this._stages = stages
         this._constraint = constraint
         this._keyAsBuffer = constraint.options.keyAsBuffer
         this._valueAsBuffer = constraint.options.valueAsBuffer
@@ -101,9 +99,8 @@ class Paginator {
             }
         }
     }
-
     release () {
-        this._stages.forEach(stage => stage.readers--)
+        this._iterator['return']()
     }
 }
 
@@ -150,37 +147,11 @@ function Locket (destructible, location, options = {}) {
     if (!(this instanceof Locket)) return new Locket(destructible, location, options)
     AbstractLevelDOWN.call(this)
     this.location = location
-    this._destructible = { root: destructible, strata: null, locket: null }
     this._cache = new Cache
-    this._primary = null
-    this._stages = []
-    const primary = coalesce(options.primary, {})
-    const stage = coalesce(options.stage, {})
-    const leaf = { stage: coalesce(stage.leaf, {}), primary: coalesce(primary.leaf, {}) }
-    const branch = { stage: coalesce(stage.branch, {}), primary: coalesce(primary.branch, {}) }
-    this._maxStageCount = coalesce(stage.max, 1024)
-    this._strata = {
-        stage: {
-            leaf: {
-                split: coalesce(leaf.stage.split, 4096),
-                merge: coalesce(leaf.stage.merge, 2048)
-            },
-            branch: {
-                split: coalesce(branch.stage.split, 4096),
-                merge: coalesce(branch.stage.merge, 2048)
-            }
-        },
-        primary: {
-            leaf: {
-                split: coalesce(leaf.primary.split, 4096),
-                merge: coalesce(leaf.primary.merge, 2048)
-            },
-            branch: {
-                split: coalesce(branch.primary.split, 4096),
-                merge: coalesce(branch.primary.merge, 2048)
-            }
-        }
-    }
+    this._versions = {}
+    this._options = options
+    this._version = 1n
+    this._amalgamator = null
 }
 util.inherits(Locket, AbstractLevelDOWN)
 
@@ -188,177 +159,63 @@ Locket.prototype._serializeKey = encode
 
 Locket.prototype._serializeValue = encode
 
-const comparator = ascension([ Buffer.compare, BigInt, Number ], function (object) {
-    return [ object.value, object.version, object.index ]
-})
-
-Locket.prototype._newStage = function (directory, options = {}) {
-    const leaf = coalesce(options.leaf, 4096)
-    const branch = coalesce(options.leaf, 4096)
-    const strata = new Strata(this._destructible.strata.ephemeral([ 'stage', options.directory ]), {
-        directory: directory,
-        branch: this._strata.stage.branch,
-        leaf: this._strata.stage.leaf,
-        cache: this._cache,
-        serializer: {
-            key: {
-                serialize: function ({ value, version, index }) {
-                    const header = { version: version.toString(), index }
-                    const buffer = Buffer.from(JSON.stringify(header))
-                    return [ buffer, value ]
-                },
-                deserialize: function (parts) {
-                    const { version, index } = JSON.parse(parts[0].toString())
-                    return { value: parts[1], version: BigInt(version), index }
-                }
-            },
-            parts: {
-                serialize: function (parts) {
-                    const header = {
-                        header: {
-                            method: parts[0].header.method,
-                            index: parts[0].header.index
-                        },
-                        count: parts[0].count,
-                        version: parts[0].version.toString()
-                    }
-                    const buffer = Buffer.from(JSON.stringify(header))
-                    return [ buffer ].concat(parts.slice(1))
-                },
-                deserialize: function (parts) {
-                    const header = JSON.parse(parts[0].toString())
-                    header.version = BigInt(header.version)
-                    return [ header ].concat(parts.slice(1))
-                }
-            }
-        },
-        _serializer: {
-            key: {
-                serialize: function ({ value, version, index }) {
-                    const header = { version, index }
-                    const buffer = Buffer.alloc(packet.key.sizeof(header))
-                    packet.key.serialize(header, buffer, 0)
-                    return [ buffer, value ]
-                },
-                deserialize: function (parts) {
-                    const { version, index } = packet.key.parse(parts[0], 0)
-                    return { value: parts[1], version, index }
-                }
-            },
-            parts: {
-                serialize: function (parts) {
-                    const buffer = Buffer.alloc(packet.meta.sizeof(parts[0]))
-                    packet.meta.serialize(parts[0], buffer, 0)
-                    return [ buffer ].concat(parts.slice(1))
-                },
-                deserialize: function (parts) {
-                    return [ packet.meta.parse(parts[0], 0) ].concat(parts.slice(1))
-                }
-            }
-        },
-        extractor: function (parts) {
-            return { value: parts[1], version: parts[0].version, index: parts[0].header.index }
-        },
-        comparator: comparator
-    })
-    return {
-        strata, path: directory, versions: { 0: true },
-        appending: true, amalgamated: false,
-        writers: 0, readers: 0, count: 0
-    }
-}
-
-Locket.prototype._filestamp = function () {
-    return String(Date.now())
-}
-
 Locket.prototype._open = callbackify(async function (options) {
     // TODO What is the behavior if you close while opening, or open while
     // closing?
-    this._isOpen = true
-    this._destructible.locket = this._destructible.root.ephemeral('locket')
-    this._destructible.strata = this._destructible.root.ephemeral('strata')
-    // TODO Hoist.
-    let exists = true
-    this._options = options
-    this._versions = { 0: true }
-    // Must be one, version zero must only come out of the primary tree.
-    this._version = 1n
-    const files = await (async () => {
-        for (;;) {
-            try {
-                return await fs.readdir(this.location)
-            } catch (error) {
-                await rescue(error, [{ code: 'ENOENT' }])
-                if (!options.createIfMissing) {
-                    throw new Error('Locket database does not exist')
-                }
-                await fs.mkdir(this.location, { recursive: true })
-            }
-        }
-    }) ()
-    const subdirs = [ 'primary', 'staging' ]
-    if (exists) {
-        const sorted = files.filter(file => file[0] != '.').sort()
-        if (!sorted.length) {
-            exists = false
-        // TODO Not a very clever recover, something might be in the midst
-        // of a rotation.
-        } else if (!subdirs.every(file => sorted.shift() == file) || sorted.length) {
-            throw new Error('not a Locket datastore')
-        }
-    }
-    if (exists && options.errorIfExists) {
-        throw new Error('Locket database already exists')
-    }
-    if (!exists) {
-        for (const dir of subdirs) {
-            await fs.mkdir(path.join(this.location, dir), { recursive: true })
-        }
-    }
-    this._primary = new Strata(this._destructible.strata.durable('primary'), {
-        directory: path.join(this.location, 'primary'),
-        cache: this._cache,
+    this._amalgamator = new Amalgamator(new Destructible('locket'), {
+        directory: this.location,
+        cache: new Cache,
         comparator: Buffer.compare,
-        serializer: 'buffer',
-        branch: this._strata.primary.branch,
-        leaf: this._strata.primary.leaf
+        header: {
+            compose: function (version, method, index, count) {
+                return { header: { method, index }, count, version }
+            },
+            serialize: function (header) {
+                return Buffer.from(JSON.stringify({
+                    header: {
+                        method: header.header.method,
+                        index: header.header.index
+                    },
+                    count: header.count,
+                    version: header.version.toString()
+                }))
+            },
+            deserialize: function (buffer) {
+                const header = JSON.parse(buffer.toString())
+                header.version = BigInt(header.version)
+                return header
+            }
+        },
+        transformer: function (operation) {
+            return {
+                method: operation.type == 'put' ? 'insert' : 'remove',
+                key: encode(operation.key),
+                value: ('value' in operation) ? encode(operation.value) : null
+            }
+        },
+        ...this._options,
+        ...options
     })
-    if ((await fs.readdir(path.join(this.location, 'primary'))).length != 0) {
-        await this._primary.open()
-    } else {
-        await this._primary.create()
-    }
-    const staging = path.join(this.location, 'staging')
-    for (const file of await fs.readdir(staging)) {
-        const stage = this._newStage(path.join(staging, file)), counts = {}
-        await stage.strata.open()
+    await this._amalgamator.ready
+    const counts = {}
+    this._versions = { 0: true }
+    for (const stage of this._amalgamator._stages) {
+        stage.versions = {}
         for await (const items of mvcc.riffle.forward(stage.strata, Strata.MIN)) {
             for (const item of items) {
                 const version = item.parts[0].version
                 if (counts[version] == null) {
                     assert(item.parts[0].count != null)
-                    // console.log(version, item.parts[0].count)
-                    counts[version] = item.parts[0].count
-                }
-                if (item.parts[0].version == 129n) {
-                    // console.log(item.parts[0].version, item.parts[0].header.method, item.parts[1].toString())
+                    this._versions[version] = counts[version] = item.parts[0].count
                 }
                 if (0 == --counts[version]) {
                     stage.versions[version] = true
                 }
             }
         }
-        //console.log(stage.versions, counts)
-        this._stages.push(stage)
-        await this._amalgamate()
-        await this._unstage()
+        //await this._amalgamate()
+        //await this._unstage()
     }
-    const directory = path.join(staging, this._filestamp())
-    await fs.mkdir(directory, { recursive: true })
-    const stage = this._newStage(directory, {})
-    await stage.strata.create()
-    this._stages.push(stage)
     return []
 })
 
@@ -385,50 +242,9 @@ Locket.prototype._snapshot = function () {
 
 //
 Locket.prototype._paginator = function (constraint, versions) {
-    const stages = this._stages.filter(stage => ! stage.amalgamated)
-
-    stages.forEach(stage => stage.readers++)
-
-    const { direction, inclusive } = constraint
-
-    // If we are exclusive we will use a maximum version going forward and a
-    // minimum version going backward, puts us where we'd expect to be if we
-    // where doing exclusive with the external key only.
-    const version = direction == 'forward'
-        ? inclusive ? 0n : 0xffffffffffffffffn
-        : inclusive ? 0xffffffffffffffffn : 0n
-    // TODO Not sure what no key plus exclusive means.
-    const versioned = constraint.key != null
-        ? { value: constraint.key, version: version }
-        : direction == 'forward'
-            ? Strata.MIN
-            : Strata.MAX
-    const key = typeof versioned == 'symbol' ? versioned : versioned.value
-
-    const riffle = mvcc.riffle[direction](this._primary, key, 32, inclusive)
-    const primary = mvcc.twiddle(riffle, item => {
-        // TODO Looks like I'm in the habit of adding extra stuff, meta stuff,
-        // so the records, so go back and ensure that I'm allowing this,
-        // forwarding the meta information.
-        return {
-            key: { value: item.parts[0], version: 0n, index: 0 },
-            parts: [{
-                header: { method: 'put' },
-                version: 0n
-            }, item.parts[0], item.parts[1]]
-        }
-    })
-
-    const riffles = this._stages.map(stage => {
-        return mvcc.riffle[direction](stage.strata, versioned, 32, inclusive)
-    })
-    const homogenize = mvcc.homogenize[direction](comparator, riffles.concat(primary))
-    const designate = mvcc.designate[direction](Buffer.compare, homogenize, versions)
-    const dilute = mvcc.dilute(designate, item => {
-        return item.parts[0].header.method == 'del' ? -1 : 0
-    })
-
-    return new Paginator(dilute[Symbol.asyncIterator](), stages.slice(), constraint)
+    const { key, direction, inclusive } = constraint
+    const iterator = this._amalgamator.iterator(versions, direction, key, inclusive)
+    return new Paginator(iterator[Symbol.asyncIterator](), constraint)
 }
 
 Locket.prototype._iterator = function (options) {
@@ -451,47 +267,6 @@ Locket.prototype._get = callbackify(async function (key, options) {
     throw new Error('NotFoundError: not found')
 })
 
-Locket.prototype._unstage = async function () {
-    const stage = this._stages.pop()
-    await stage.strata.close()
-    // TODO Implement Strata.options.directory.
-    await fs.rmdir(stage.path, { recursive: true })
-    this._maybeUnstage()
-}
-
-Locket.prototype._maybeUnstage = function () {
-    if (this._isOpen && this._stages.length > 1) {
-        const stage = this._stages[this._stages.length - 1]
-        if (stage.amalgamated && stage.readers == 0) {
-            this._destructible.locket.ephemeral([ 'unstage', stage.path ], this._unstage())
-        }
-    }
-}
-
-// TODO What makes me think that all of these entries are any good? In fact, if
-// we've failed while writing a log, then loading the leaf is going to start to
-// play the entries of the failed transaction. We need a player that is going to
-// save up the entries, and then play them as batches, if the batch has a
-// comment record attached to it. Then we know that our log here is indeed the
-// latest and greatest.
-//
-// Another problem is that the code below will insert the records with their
-// logged version, instead of converting those verisons to zero.
-Locket.prototype._amalgamate = async function () {
-    const stage = this._stages[this._stages.length - 1]
-    assert.equal(stage.writers, 0)
-    const riffle = mvcc.riffle.forward(stage.strata, Strata.MIN)
-    // TODO Track versions in stage.
-    const designate = mvcc.designate.forward(Buffer.compare, riffle, stage.versions)
-    await mvcc.splice(item => {
-        return {
-            key: item.key.value,
-            parts: item.parts[0].header.method == 'put' ? item.parts.slice(1) : null
-        }
-    }, this._primary, designate)
-    stage.amalgamated = true
-    this._maybeUnstage()
-}
 
 Locket.prototype._put = function (key, value, options, callback) {
     this._batch([{ type: 'put', key: key, value: value }], options, callback)
@@ -499,51 +274,6 @@ Locket.prototype._put = function (key, value, options, callback) {
 
 Locket.prototype._del = function (key, options, callback) {
     this._batch([{ type: 'del', key: key }], options, callback)
-}
-
-Locket.prototype._meta = function (version, method, index, count) {
-    return { header: { method, index }, count, version }
-}
-
-Locket.prototype._merge = async function (version, operations, meta) {
-    const stage = this._stages[0]
-    stage.writers++
-    const writes = {}
-    let cursor = Strata.nullCursor(), found, index = 0, i = 0
-    for (const operation of operations) {
-        const { type: method, key: value } = operation
-        const key = { value: encode(value), version, index: i }
-        for (;;) {
-            ; ({ index, found } = cursor.indexOf(key, cursor.page.ghosts))
-            if (index != null) {
-                break
-            }
-            cursor.release()
-            cursor = await stage.strata.search(key)
-        }
-        const header = this._meta(version, method, i, meta)
-        if (method == 'put') {
-            cursor.insert(index, key, [ header, operation.key, operation.value ], writes)
-        } else {
-            cursor.insert(index, key, [ header, operation.key ], writes)
-        }
-        stage.count++
-        i++
-    }
-    cursor.release()
-    await Strata.flush(writes)
-    stage.versions[version] = true
-    stage.writers--
-    // A race to create the next stage, but the loser will merely create a stage
-    // taht will be unused or little used.
-    if (this._stages[0].count > this._maxStageCount && this._stages.length != 2) {
-        const directory = path.join(this.location, 'staging', this._filestamp())
-        await fs.mkdir(directory, { recursive: true })
-        const next = this._newStage(directory, {})
-        await next.strata.create()
-        this._stages.unshift(next)
-    }
-    this._maybeAmalgamate()
 }
 
 // Could use a header record. It would sort out to be less than all the user
@@ -554,22 +284,9 @@ Locket.prototype._merge = async function (version, operations, meta) {
 Locket.prototype._batch = callbackify(async function (batch, options) {
     const version = ++this._version
     this._versions[version] = true
-    await this._merge(version, batch, batch.length)
+    await this._amalgamator.merge(version, batch, batch.length)
     return []
 })
-
-Locket.prototype._maybeAmalgamate = function () {
-    if (this._isOpen && this._stages.length == 2) {
-        const stage = this._stages[this._stages.length - 1]
-        if (stage.appending && stage.writers == 0) {
-            this._destructible.locket.ephemeral('amalgamate', async () => {
-                await this._amalgamate()
-                this._maybeUnstage()
-                this._maybeAmalgamate()
-            })
-        }
-    }
-}
 
 Locket.prototype._approximateSize = callbackify(async function (from, to) {
     const constraint = constrain(Buffer.compare, encode, { gte: from, lte: to })
@@ -584,16 +301,6 @@ Locket.prototype._approximateSize = callbackify(async function (from, to) {
 
 // TODO Countdown through the write queue.
 Locket.prototype._close = callbackify(async function () {
-    if (this._isOpen) {
-        this._isOpen = false
-        this._destructible.locket.destroy()
-        await this._destructible.locket.destructed
-        await this._primary.close()
-        while (this._stages.length != 0) {
-            await this._stages.shift().strata.close()
-        }
-        await this._destructible.strata.destructed
-        this._cache.purge(0)
-    }
+    await this._amalgamator.destructible.destroy().rejected
     return []
 })
