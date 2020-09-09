@@ -186,6 +186,19 @@ Locket.prototype._open = callbackify(async function (options) {
                 return header
             }
         },
+        parts: {
+            serialize: function (parts) { return parts },
+            deserialize: function (parts) { return parts }
+        },
+        key: {
+            compare: Buffer.compare,
+            serialize: function (key) {
+                return [ key ]
+            },
+            deserialize: function (parts) {
+                return parts[0]
+            }
+        },
         transformer: function (operation) {
             return {
                 method: operation.type == 'put' ? 'insert' : 'remove',

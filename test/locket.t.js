@@ -69,38 +69,40 @@ require('proof')(6, async okay =>  {
 
     await callback(callback => locket.close(callback))
 
-    await callback(callback => locket.open({ createIfMissing: true }, callback))
+    await Destructible.rescue(async function () {
+        await callback(callback => locket.open({ createIfMissing: true }, callback))
 
-    {
-        const [ value ] = await callback(callback => locket.get('a', callback))
-        okay({
-            isBuffer: Buffer.isBuffer(value),
-            value: value.toString()
-        }, {
-            isBuffer: true,
-            value: 'z'
-        }, 'reopen')
-    }
+        {
+            const [ value ] = await callback(callback => locket.get('a', callback))
+            okay({
+                isBuffer: Buffer.isBuffer(value),
+                value: value.toString()
+            }, {
+                isBuffer: true,
+                value: 'z'
+            }, 'reopen')
+        }
 
-    {
-        const iterator = locket._iterator({
-            keys: true, values: true, keyAsBuffer: false, valueAsBuffer: false
-        })
-        const [ key, value ] = await callback(callback => iterator.next(callback))
-        okay({ key, value }, { key: 'a', value: 'z' }, 'next')
-        const ended = await callback(callback => iterator.next(callback))
-        okay(ended, [], 'ended')
-        await callback(callback => iterator.end(callback))
-    }
+        {
+            const iterator = locket._iterator({
+                keys: true, values: true, keyAsBuffer: false, valueAsBuffer: false
+            })
+            const [ key, value ] = await callback(callback => iterator.next(callback))
+            okay({ key, value }, { key: 'a', value: 'z' }, 'next')
+            const ended = await callback(callback => iterator.next(callback))
+            okay(ended, [], 'ended')
+            await callback(callback => iterator.end(callback))
+        }
 
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('')
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('')
 
-    const put = alphabet.map(letter => { return { type: 'put', key: letter, value: letter } })
-    const del = alphabet.map(letter => { return { type: 'del', key: letter } })
+        const put = alphabet.map(letter => { return { type: 'put', key: letter, value: letter } })
+        const del = alphabet.map(letter => { return { type: 'del', key: letter } })
 
-    for (let i = 0; i < 128; i++) {
-        await callback(callback => locket.batch(put.concat(del), callback))
-    }
+        for (let i = 0; i < 128; i++) {
+            await callback(callback => locket.batch(put.concat(del), callback))
+        }
+    })
 
     await callback(callback => locket.close(callback))
 
