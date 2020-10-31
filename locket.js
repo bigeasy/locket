@@ -99,6 +99,7 @@ class Paginator {
             }
         }
     }
+
     release () {
         this._iterator['return']()
     }
