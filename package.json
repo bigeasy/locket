@@ -23,7 +23,7 @@
     {
                             "abstract-leveldown":           "6.3.0",
                             "amalgamate":                   "0.1.10",
-                            "b-tree":                       "2.0.0-alpha.31",
+                            "b-tree":                       "2.0.0-alpha.63",
                             "constrain":                    "2.0.0-alpha.0",
                             "destructible":                 "7.0.0-alpha.8",
                             "extant":                       "^1.0.20",
