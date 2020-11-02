@@ -29,6 +29,7 @@
                             "extant":                       "^1.0.20",
                             "riffle":                       "2.0.0-alpha.40",
                             "prospective":                  "0.3.0",
+                            "reciprocate":                  "0.0.1",
                             "rescue":                       "7.0.0-alpha.1",
                             "rimraf":                       "3.0.2"
     },
