@@ -35,6 +35,7 @@ const Locker = require('amalgamate/locker')
 
 const callbackify = require('prospective/callbackify')
 
+const cadence = require('cadence')
 const packet = require('./packet')
 
 // Inheritence.
@@ -244,20 +245,21 @@ Locket.prototype._iterator = function (options) {
 }
 
 // TODO Maybe just leave this?
-Locket.prototype._get = callbackify(async function (key, options) {
+Locket.prototype._get = cadence(function (step, key, options) {
     const constraint = constrain(Buffer.compare, encode, {
         gte: key, keys: true, values: true, keyAsBuffer: true, valueAsBuffer: true
     })
     const snapshot = this._locker.snapshot()
     const paginator = this._paginator(constraint, snapshot)
-    // TODO How do I reuse Cursor.found out of Riffle et. al.? Eh, no good way
-    // since we have to advance, merge, dilute, etc. anyway.
-    const next = await paginator.next()
-    this._locker.release(snapshot)
-    if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
-        return [ options.asBuffer ? next[1] : next[1].toString() ]
-    }
-    throw new Error('NotFoundError: not found')
+    step(function () {
+        return paginator.next()
+    }, function (next) {
+        this._locker.release(snapshot)
+        if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
+            return [ options.asBuffer ? next[1] : next[1].toString() ]
+        }
+        throw new Error('NotFoundError: not found')
+    })
 })
 
 Locket.prototype._put = function (key, value, options, callback) {
