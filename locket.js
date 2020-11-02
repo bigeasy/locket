@@ -33,8 +33,6 @@ const Destructible = require('destructible')
 const Amalgamator = require('amalgamate')
 const Locker = require('amalgamate/locker')
 
-const callbackify = require('prospective/callbackify')
-
 const cadence = require('cadence')
 const packet = require('./packet')
 
@@ -55,7 +53,8 @@ const rescue = require('rescue')
 const ascension = require('ascension')
 
 const mvcc = {
-    riffle: require('riffle')
+    riffle: require('riffle'),
+    satiate: require('satiate')
 }
 
 // TODO Let's see if we can get throught his without having to worry about
@@ -64,54 +63,50 @@ function encode (buffer) {
     return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
 }
 
-class Paginator {
-    constructor (iterator, constraint) {
-        this._iterator = iterator
-        this._constraint = constraint
-        this._keyAsBuffer = constraint.options.keyAsBuffer
-        this._valueAsBuffer = constraint.options.valueAsBuffer
-        this._keys = constraint.options.keys
-        this._values = constraint.options.values
-        this._items = []
-        this._index = 0
-    }
+function Paginator (iterator, constraint) {
+    this._iterator = mvcc.satiate(iterator, 1)
+    this._constraint = constraint
+    this._keyAsBuffer = constraint.options.keyAsBuffer
+    this._valueAsBuffer = constraint.options.valueAsBuffer
+    this._keys = constraint.options.keys
+    this._values = constraint.options.values
+    this._items = []
+    this._index = 0
+}
 
-    async next () {
-        for (;;) {
-            if (this._items.length != this._index) {
-                const item = this._items[this._index++]
-                if (this._constraint.included(item)) {
-                    const result = new Array(2)
-                    if (this._keys) {
-                        result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
-                    }
-                    if (this._values) {
-                        result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
-                    }
-                    return result
-                } else {
-                    return []
-                }
-            } else {
-                let items = null
-                const trampoline = new Trampoline
-                this._iterator.next(trampoline, $items => items = $items)
-                while (trampoline.seek()) {
-                    await trampoline.shift()
-                }
-                if (this._iterator.done) {
-                    return []
-                } else {
-                    this._items = items
-                    this._index = 0
-                }
+Paginator.prototype.next = cadence(function (step) {
+    if (this._items.length != this._index) {
+        const item = this._items[this._index++]
+        if (this._constraint.included(item)) {
+            const result = new Array(2)
+            if (this._keys) {
+                result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
             }
+            if (this._values) {
+                result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
+            }
+            return result
+        } else {
+            return []
         }
     }
+    let items = null
+    step(function () {
+        const trampoline = new Trampoline
+        this._iterator.next(trampoline, $items => items = $items)
+        trampoline.bounce(step())
+    }, function () {
+        if (this._iterator.done) {
+            return []
+        } else {
+            this._items = items
+            this._index = 0
+            this.next(step())
+        }
+    })
+})
 
-    release () {
-        this._iterator['return']()
-    }
+Paginator.prototype.release = function () {
 }
 
 // An implementation of the LevelDOWN `Iterator` object.
@@ -138,9 +133,9 @@ util.inherits(Iterator, AbstractIterator)
 // iterator modules.
 
 //
-Iterator.prototype._next = callbackify(function () {
-    return this._paginator.next()
-})
+Iterator.prototype._next = function (callback) {
+    this._paginator.next(callback)
+}
 
 Iterator.prototype._seek = function (target) {
     const paginator = this._paginator
@@ -169,7 +164,7 @@ Locket.prototype._serializeKey = encode
 
 Locket.prototype._serializeValue = encode
 
-Locket.prototype._open = callbackify(async function (options) {
+Locket.prototype._open = cadence(function (step, options) {
     this._locker = new Locker({ heft: coalesce(options.heft, 1024 * 1024) })
     // TODO What is the behavior if you close while opening, or open while
     // closing?
@@ -210,10 +205,15 @@ Locket.prototype._open = callbackify(async function (options) {
         ...this._options,
         ...options
     })
-    await this._amalgamator.ready
-    await this._amalgamator.count()
-    await this._amalgamator.locker.rotate()
-    return []
+    step(function () {
+        return this._amalgamator.ready
+    }, function () {
+        return this._amalgamator.count()
+    }, function () {
+        return this._amalgamator.locker.rotate()
+    }, function () {
+        return []
+    })
 })
 
 // Iteration of the database requires merging the results from the deep storage
@@ -252,8 +252,8 @@ Locket.prototype._get = cadence(function (step, key, options) {
     const snapshot = this._locker.snapshot()
     const paginator = this._paginator(constraint, snapshot)
     step(function () {
-        return paginator.next()
-    }, function (next) {
+        paginator.next(step())
+    }, [], function (next) {
         this._locker.release(snapshot)
         if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
             return [ options.asBuffer ? next[1] : next[1].toString() ]
@@ -275,16 +275,19 @@ Locket.prototype._del = function (key, options, callback) {
 // filter it. It does however mean at least two writes for every `put` or `del`
 // and I suspect that common usage is ingle `put` or `del`, so going to include
 // the count in ever record, it is only 32-bits.
-Locket.prototype._batch = callbackify(async function (batch, options) {
+Locket.prototype._batch = cadence(function (step, batch, options) {
     const version = ++this._version
     this._versions[version] = true
     const mutator = this._locker.mutator()
-    await this._amalgamator.merge(mutator, batch, true)
-    this._locker.commit(mutator)
-    return []
+    step(function () {
+        return this._amalgamator.merge(mutator, batch, true)
+    }, function () {
+        this._locker.commit(mutator)
+        return []
+    })
 })
 
-Locket.prototype._approximateSize = callbackify(async function (from, to) {
+Locket.prototype._approximateSize = cadence(function (from, to) {
     const constraint = constrain(Buffer.compare, encode, { gte: from, lte: to })
     let approximateSize = 0
     for (const items of this._whatever()) {
@@ -296,7 +299,10 @@ Locket.prototype._approximateSize = callbackify(async function (from, to) {
 })
 
 // TODO Countdown through the write queue.
-Locket.prototype._close = callbackify(async function () {
-    await this._amalgamator.destructible.destroy().rejected
-    return []
+Locket.prototype._close = cadence(function (step) {
+    step(function () {
+        return this._amalgamator.destructible.destroy().rejected
+    }, function () {
+        return []
+    })
 })

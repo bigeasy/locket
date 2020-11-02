@@ -32,7 +32,8 @@
                             "prospective":                  "0.3.0",
                             "reciprocate":                  "0.0.2",
                             "rescue":                       "7.0.0-alpha.1",
-                            "rimraf":                       "3.0.2"
+                            "rimraf":                       "3.0.2",
+                            "satiate":                      "0.0.0"
     },
     "devDependencies":
     {
