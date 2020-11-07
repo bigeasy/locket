@@ -53,7 +53,8 @@ const rescue = require('rescue')
 const ascension = require('ascension')
 
 const mvcc = {
-    satiate: require('satiate')
+    satiate: require('satiate'),
+    constrain: require('constrain/iterator')
 }
 
 // TODO Let's see if we can get throught his without having to worry about
@@ -62,32 +63,31 @@ function encode (buffer) {
     return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
 }
 
-function Paginator (iterator, constraint) {
-    this._iterator = mvcc.satiate(iterator, 1)
-    this._constraint = constraint
-    this._keyAsBuffer = constraint.options.keyAsBuffer
-    this._valueAsBuffer = constraint.options.valueAsBuffer
-    this._keys = constraint.options.keys
-    this._values = constraint.options.values
+function Paginator (iterator, constraints, options) {
+    const constrained = constraints == null
+        ? iterator
+        : mvcc.constrain(iterator, constraints)
+    this._iterator = mvcc.satiate(constrained, 1)
+    this._constraints = constraints
+    this._keyAsBuffer = options.keyAsBuffer
+    this._valueAsBuffer = options.valueAsBuffer
+    console.log(options, constraints)
+    this._keys = options.keys
+    this._values = options.values
     this._items = []
     this._index = 0
 }
 
 Paginator.prototype.next = cadence(function (step) {
     if (this._items.length != this._index) {
-        const item = this._items[this._index++]
-        if (this._constraint.included(item)) {
-            const result = new Array(2)
-            if (this._keys) {
-                result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
-            }
-            if (this._values) {
-                result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
-            }
-            return result
-        } else {
-            return []
+        const item = this._items[this._index++], result = new Array(2)
+        if (this._keys) {
+            result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
         }
+        if (this._values) {
+            result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
+        }
+        return result
     }
     let items = null
     step(function () {
@@ -105,9 +105,6 @@ Paginator.prototype.next = cadence(function (step) {
     })
 })
 
-Paginator.prototype.release = function () {
-}
-
 // An implementation of the LevelDOWN `Iterator` object.
 //
 // The LevelUP interface allows you to specify encodings at both when you create
@@ -118,10 +115,11 @@ Paginator.prototype.release = function () {
 // TODO No call to super!
 function Iterator (db, options) {
     AbstractIterator.call(this, db)
-    this._constraint = constrain(Buffer.compare, encode, options)
+    this._constraint = createConstraint(options)
+    this._options = options
     this._db = db
     this._transaction = this._db._locker.snapshot()
-    this._paginator = this._db._paginator(this._constraint, this._transaction)
+    this._paginator = this._db._paginator(this._constraint, this._transaction, this._options)
 }
 util.inherits(Iterator, AbstractIterator)
 
@@ -233,23 +231,59 @@ Locket.prototype._open = cadence(function (step, options) {
 // records that have not been deleted and that match the user's range critera.
 
 //
-Locket.prototype._paginator = function (constraint, transaction) {
-    const { key, direction, inclusive } = constraint
+Locket.prototype._paginator = function (constraint, transaction, options) {
+    console.log(constraint)
+    const [{ key, inclusive, direction }, constraints ] = constraint
+    console.log(key, inclusive, direction, constraints)
     const iterator = this._amalgamator.iterator(transaction, direction, key, inclusive)
-    return new Paginator(iterator, constraint)
+    return new Paginator(iterator, constraints, options)
 }
 
 Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
+const duplicated = ascension([ Buffer.compare, [ Number, -1 ], [ Number, -1 ] ], object => object)
+
+function createConstraint (options) {
+    const start = coalesce(options.gt, options.start, options.gte, null)
+    const end = coalesce(options.lt, options.end, options.lte, null)
+    const limit = coalesce(options.limit, -1)
+    const reverse = coalesce(options.reverse, false)
+    const direction = reverse ? 'reverse' : 'forward'
+    const keys = [{
+        comparator: duplicated,
+        key: [ start, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER ],
+        inclusive: options.lt == null,
+        limit: limit,
+        direction: direction,
+        reverse: reverse
+    }, {
+        comparator: duplicated,
+        key: [ end, 0, 0 ],
+        inclusive: options.gt == null,
+        limit: limit,
+        direction: direction,
+        reverse: reverse
+    }]
+    if (reverse) {
+        keys.reverse()
+    }
+    if (keys[1].limit == -1 && keys[1].key[0] == null) {
+        keys[1] = null
+    }
+    keys[0].key = keys[0].key[0]
+    return keys
+}
+
 // TODO Maybe just leave this?
 Locket.prototype._get = cadence(function (step, key, options) {
-    const constraint = constrain(Buffer.compare, encode, {
-        gte: key, keys: true, values: true, keyAsBuffer: true, valueAsBuffer: true
-    })
+    const constraint = createConstraint({ gte: key, lte: key })
+    console.log(constraint)
     const snapshot = this._locker.snapshot()
-    const paginator = this._paginator(constraint, snapshot)
+    const paginator = this._paginator(constraint, snapshot, {
+        keys: true, values: true, keyAsBuffer: true, valueAsBuffer: true
+    })
     step(function () {
         paginator.next(step())
     }, [], function (next) {
