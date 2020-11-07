@@ -53,7 +53,6 @@ const rescue = require('rescue')
 const ascension = require('ascension')
 
 const mvcc = {
-    riffle: require('riffle'),
     satiate: require('satiate')
 }
 
