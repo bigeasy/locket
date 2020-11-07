@@ -167,46 +167,46 @@ Locket.prototype._open = cadence(function (step, options) {
     this._locker = new Locker({ heft: coalesce(options.heft, 1024 * 1024) })
     // TODO What is the behavior if you close while opening, or open while
     // closing?
-    this._amalgamator = new Amalgamator(new Destructible('locket'), {
-        locker: this._locker,
-        directory: this.location,
-        cache: new Cache,
-        comparator: Buffer.compare,
-        parts: {
-            serialize: function (parts) { return parts },
-            deserialize: function (parts) { return parts }
-        },
-        key: {
-            compare: Buffer.compare,
-            extract: function (parts)  {
-                return parts[0]
-            },
-            serialize: function (key) {
-                return [ key ]
-            },
-            deserialize: function (parts) {
-                return parts[0]
-            }
-        },
-        transformer: function (operation) {
-            if (operation.type == 'put') {
-                return {
-                    method: 'insert',
-                    key: operation.key,
-                    parts: [ operation.key, operation.value ]
-                }
-            }
-            return {
-                method: 'remove',
-                key: operation.key
-            }
-        },
-        ...this._options,
-        ...options
-    })
     step(function () {
-        return this._amalgamator.ready
-    }, function () {
+        return Amalgamator.open(new Destructible('locket'), {
+            locker: this._locker,
+            directory: this.location,
+            cache: new Cache,
+            comparator: Buffer.compare,
+            parts: {
+                serialize: function (parts) { return parts },
+                deserialize: function (parts) { return parts }
+            },
+            key: {
+                compare: Buffer.compare,
+                extract: function (parts)  {
+                    return parts[0]
+                },
+                serialize: function (key) {
+                    return [ key ]
+                },
+                deserialize: function (parts) {
+                    return parts[0]
+                }
+            },
+            transformer: function (operation) {
+                if (operation.type == 'put') {
+                    return {
+                        method: 'insert',
+                        key: operation.key,
+                        parts: [ operation.key, operation.value ]
+                    }
+                }
+                return {
+                    method: 'remove',
+                    key: operation.key
+                }
+            },
+            ...this._options,
+            ...options
+        })
+    }, function (amalgamator) {
+        this._amalgamator = amalgamator
         return this._amalgamator.count()
     }, function () {
         return this._amalgamator.locker.rotate()
