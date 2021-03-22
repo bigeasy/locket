@@ -6,7 +6,6 @@ require('proof')(6, require('cadence')(function (step, okay) {
     const destructible = new Destructible('put.t')
 
     const callback = require('comeuppance')
-    const rimraf = require('rimraf')
 
     const Locket = require('..')
 
