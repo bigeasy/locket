@@ -28,7 +28,6 @@
                             "constrain":                    "2.0.0-alpha.1",
                             "destructible":                 "7.0.0-alpha.14",
                             "extant":                       "^1.0.20",
-                            "prospective":                  "0.3.0",
                             "reciprocate":                  "0.0.2",
                             "rescue":                       "7.0.0-alpha.1",
                             "rimraf":                       "3.0.2",
@@ -36,6 +35,7 @@
     },
     "devDependencies":
     {
+                            "comeuppance":                  "0.0.1",
                             "leveldown":                    "5.6.0",
                             "levelup":                      "4.4.0",
                             "proof":                        "^9.0.2",
