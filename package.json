@@ -39,7 +39,7 @@
                             "leveldown":                    "5.6.0",
                             "levelup":                      "4.4.0",
                             "proof":                        "^9.0.2",
-                            "tape":                         "5.0.1"
+                            "tape":                         "5.2.2"
     },
     "main":                 "locket",
     "scripts":
