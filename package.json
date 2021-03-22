@@ -30,7 +30,7 @@
                             "extant":                       "^2.0.0-alpha.0",
                             "reciprocate":                  "0.0.6",
                             "rescue":                       "7.0.0-alpha.13",
-                            "satiate":                      "0.0.1"
+                            "satiate":                      "0.0.2"
     },
     "devDependencies":
     {
