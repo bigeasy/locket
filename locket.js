@@ -17,40 +17,60 @@ module.exports = Locket
 //
 // You thought long and hard about this. You are not getting smarter.
 
+// Node.js API.
+const util              = require('util')
+const assert            = require('assert')
+
 // Return the first value that is not `null` nor `undefined`.
-const coalesce = require('extant')
+const { coalesce }      = require('extant')
 
 // Modules for storage and concurrency.
 const Strata            = require('b-tree')
-const Cache = require('b-tree/cache')
+
+// A fiber-constrained `async`/`await` work queue.
+const Turnstile         = require('turnstile')
+
+// Write-ahead log.
+const WriteAhead        = require('writeahead')
+
+// LevelUp adaptors.
 const AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 const AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
-const Trampoline = require('reciprocate')
+// An `async`/`await` trampoline.
+const Trampoline        = require('reciprocate')
 
-const Destructible = require('destructible')
+// Structured concurrency.
+const Destructible      = require('destructible')
 
-const Amalgamator = require('amalgamate')
-const Locker = require('amalgamate/locker')
+// A Swiss Army asynchronous control-flow function generator for JavaScript.
+const cadence           = require('cadence')
 
-const cadence = require('cadence')
-const packet = require('./packet')
+// A LRU cache for memory paging and content caching.
+const Magazine          = require('magazine')
 
-// Inheritence.
-const util = require('util')
+// Handle-based `async`/`await` file operations.
+const Operation         = require('operation')
 
-// Invariants.
-const assert = require('assert')
+// WAL merge tree.
+const Amalgamator       = require('amalgamate')
+const Rotator           = require('amalgamate/rotator')
+
+const Fracture          = require('fracture')
+
 
 // Modules for file operations. We use `strftime` to create date stamped file
 // names.
-const fs = require('fs').promises
-const path = require('path')
+const fs                = require('fs').promises
+const path              = require('path')
 
-const constrain = require('constrain')
+const constrain         = require('constrain')
 
-const rescue = require('rescue')
-const ascension = require('ascension')
+// Conditionally catch JavaScript exceptions based on type and properties.
+const rescue            = require('rescue')
+
+// A comparator function builder.
+const ascension         = require('ascension')
 
 const mvcc = {
     satiate: require('satiate'),
@@ -71,7 +91,6 @@ function Paginator (iterator, constraints, options) {
     this._constraints = constraints
     this._keyAsBuffer = options.keyAsBuffer
     this._valueAsBuffer = options.valueAsBuffer
-    console.log(options, constraints)
     this._keys = options.keys
     this._values = options.values
     this._items = []
@@ -118,7 +137,7 @@ function Iterator (db, options) {
     this._constraint = createConstraint(options)
     this._options = options
     this._db = db
-    this._transaction = this._db._locker.snapshot()
+    this._transaction = this._db._rotator.locker.snapshot()
     this._paginator = this._db._paginator(this._constraint, this._transaction, this._options)
 }
 util.inherits(Iterator, AbstractIterator)
@@ -141,7 +160,7 @@ Iterator.prototype._seek = function (target) {
 }
 
 Iterator.prototype._end = function (callback) {
-    this._db._locker.release(this._transaction)
+    this._db._rotator.locker.release(this._transaction)
     callback()
 }
 
@@ -149,7 +168,8 @@ function Locket (destructible, location, options = {}) {
     if (!(this instanceof Locket)) return new Locket(destructible, location, options)
     AbstractLevelDOWN.call(this)
     this.location = location
-    this._cache = new Cache
+    this._cache = coalesce(options.cache, new Magazine),
+    // TODO Allow common operation handle cache.
     this._versions = {}
     this._options = options
     this._version = 1n
@@ -162,31 +182,66 @@ Locket.prototype._serializeKey = encode
 Locket.prototype._serializeValue = encode
 
 Locket.prototype._open = cadence(function (step, options) {
-    this._locker = new Locker({ heft: coalesce(options.heft, 1024 * 1024) })
-    // TODO What is the behavior if you close while opening, or open while
-    // closing?
+    const destructible = new Destructible('locket')
+    // TODO Only use the old callback `fs`.
+    const fs = require('fs')
+    // TODO What is the behavior if you close while opening, or open while closing?
     step(function () {
-        return Amalgamator.open(new Destructible('locket'), {
-            locker: this._locker,
-            directory: this.location,
-            cache: new Cache,
-            comparator: Buffer.compare,
-            parts: {
-                serialize: function (parts) { return parts },
-                deserialize: function (parts) { return parts }
-            },
-            key: {
-                compare: Buffer.compare,
-                extract: function (parts)  {
-                    return parts[0]
+        step(function () {
+            fs.readdir(this.location, step())
+        }, function (files) {
+            const exists = ([ 'wal', 'tree' ]).filter(file => ~files.indexOf(file))
+            if (exists.length == 0) {
+                return false
+            }
+            if (exists.length == 2) {
+                return true
+            }
+            // TODO Interrupt or LevelUp specific error.
+            throw new Error('partial extant database')
+        }, function (exists) {
+            if (! exists) {
+                step(function () {
+                    fs.mkdir(path.resolve(this.location, 'wal'), { recursive: true }, step())
+                }, function () {
+                    fs.mkdir(path.resolve(this.location, 'tree'), { recursive: true }, step())
+                }, function () {
+                    return false
+                })
+            } else {
+                return exists
+            }
+        })
+    }, async function (exists) {
+        const turnstile = new Turnstile(destructible.durable($ => $(), { isolated: true }, 'turnstile'))
+        const writeahead = new WriteAhead(destructible.durable($ => $(), 'writeahead'), turnstile, await WriteAhead.open({
+            directory: path.resolve(this.location, 'wal')
+        }))
+        this._rotator = new Rotator(destructible.durable($ => $(), 'rotator'), await Rotator.open(writeahead), { size: 1024 * 1024 / 4 })
+        // TODO Make strands user optional.
+        return this._rotator.open(Fracture.stack(), 'locket', {
+            handles: new Operation.Cache(new Magazine),
+            directory: path.resolve(this.location, 'tree'),
+            create: ! exists,
+            cache: this._cache,
+            key: 'tree',
+            // TODO Use CRC32 or FNV.
+            checksum: () => '0',
+            extractor: parts => parts[0],
+            serializer: {
+                key: {
+                    serialize: key => [ key ],
+                    deserialize: parts => parts[0]
                 },
-                serialize: function (key) {
-                    return [ key ]
-                },
-                deserialize: function (parts) {
-                    return parts[0]
+                parts: {
+                    serialize: parts => parts,
+                    deserialize: parts => parts
                 }
             },
+        }, {
+            pages: new Magazine,
+            turnstile: turnstile,
+            comparator: Buffer.compare,
             transformer: function (operation) {
                 if (operation.type == 'put') {
                     return {
@@ -200,14 +255,17 @@ Locket.prototype._open = cadence(function (step, options) {
                     key: operation.key
                 }
             },
-            ...this._options,
-            ...options
+            primary: options.primary || {
+                leaf: { split: 256, merge: 32 },
+                branch: { split: 256, merge: 32 },
+            },
+            stage: options.stage || {
+                leaf: { split: 256, merge: 32 },
+                branch: { split: 256, merge: 32 },
+            }
         })
     }, function (amalgamator) {
         this._amalgamator = amalgamator
-        return this._amalgamator.count()
-    }, function () {
-        return this._amalgamator.locker.rotate()
     }, function () {
         return []
     })
@@ -232,9 +290,7 @@ Locket.prototype._open = cadence(function (step, options) {
 
 //
 Locket.prototype._paginator = function (constraint, transaction, options) {
-    console.log(constraint)
     const [{ key, inclusive, direction }, constraints ] = constraint
-    console.log(key, inclusive, direction, constraints)
     const iterator = this._amalgamator.iterator(transaction, direction, key, inclusive)
     return new Paginator(iterator, constraints, options)
 }
@@ -243,7 +299,7 @@ Locket.prototype._iterator = function (options) {
     return new Iterator(this, options)
 }
 
-const duplicated = ascension([ Buffer.compare, [ Number, -1 ], [ Number, -1 ] ], object => object)
+const duplicated = ascension([ Buffer.compare, [ Number, -1 ], [ Number, -1 ] ])
 
 function createConstraint (options) {
     const start = coalesce(options.gt, options.start, options.gte, null)
@@ -279,15 +335,14 @@ function createConstraint (options) {
 // TODO Maybe just leave this?
 Locket.prototype._get = cadence(function (step, key, options) {
     const constraint = createConstraint({ gte: key, lte: key })
-    console.log(constraint)
-    const snapshot = this._locker.snapshot()
+    const snapshot = this._rotator.locker.snapshot()
     const paginator = this._paginator(constraint, snapshot, {
         keys: true, values: true, keyAsBuffer: true, valueAsBuffer: true
     })
     step(function () {
         paginator.next(step())
     }, [], function (next) {
-        this._locker.release(snapshot)
+        this._rotator.locker.release(snapshot)
         if (next.length != 0 && Buffer.compare(next[0], key) == 0) {
             return [ options.asBuffer ? next[1] : next[1].toString() ]
         }
@@ -309,13 +364,13 @@ Locket.prototype._del = function (key, options, callback) {
 // and I suspect that common usage is ingle `put` or `del`, so going to include
 // the count in ever record, it is only 32-bits.
 Locket.prototype._batch = cadence(function (step, batch, options) {
-    const version = ++this._version
-    this._versions[version] = true
-    const mutator = this._locker.mutator()
+    const mutator = this._rotator.locker.mutator()
     step(function () {
-        return this._amalgamator.merge(mutator, batch, true)
+        return this._amalgamator.merge(Fracture.stack(), mutator, batch)
     }, function () {
-        this._locker.commit(mutator)
+        return this._rotator.commit(Fracture.stack(), mutator.mutation.version)
+    }, function () {
+        this._rotator.locker.commit(mutator)
         return []
     })
 })
@@ -334,7 +389,7 @@ Locket.prototype._approximateSize = cadence(function (from, to) {
 // TODO Countdown through the write queue.
 Locket.prototype._close = cadence(function (step) {
     step(function () {
-        return this._amalgamator.destructible.destroy().rejected
+        return this._amalgamator.destructible.destroy().promise
     }, function () {
         return []
     })

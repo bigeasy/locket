@@ -12,7 +12,9 @@ require('proof')(6, require('cadence')(function (step, okay) {
     const location = path.join(__dirname, 'tmp', 'locket')
 
     step(function () {
-        fs.rmdir(location, { recursive: true }, step())
+        fs.rm(location, { recursive: true, force: true }, step())
+    }, function () {
+        fs.mkdir(location, { recursive: true }, step())
     }, function () {
         new Locket(destructible, location)
 
