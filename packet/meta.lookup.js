@@ -1,1 +1,0 @@
-module.exports = [ [ 'del', 'put' ] ]
