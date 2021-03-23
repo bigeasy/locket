@@ -1,6 +1,6 @@
 {
     "name":                 "locket",
-    "version":              "2.0.0-alpha.0",
+    "version":              "2.0.0-alpha.1",
     "description":
 
       "A pure-JavaScript LevelDB implementation backed by a durable and persistent evented I/O b-tree for use with LevelUP.",
