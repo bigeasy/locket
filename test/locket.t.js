@@ -12,7 +12,11 @@ require('proof')(6, require('cadence')(function (step, okay) {
     const location = path.join(__dirname, 'tmp', 'locket')
 
     step(function () {
-        fs.rm(location, { recursive: true, force: true }, step())
+        if (/^v12\./.test(process.version)) {
+            fs.rmdir(location, { recursive: true }, step())
+        } else {
+            fs.rm(location, { recursive: true, force: true }, step())
+        }
     }, function () {
         fs.mkdir(location, { recursive: true }, step())
     }, function () {
