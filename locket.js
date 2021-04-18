@@ -112,7 +112,7 @@ Paginator.prototype.next = cadence(function (step) {
     step(function () {
         const trampoline = new Trampoline
         this._iterator.next(trampoline, $items => items = $items)
-        trampoline.bounce(step())
+        trampoline.callback(step())
     }, function () {
         if (this._iterator.done) {
             return []
