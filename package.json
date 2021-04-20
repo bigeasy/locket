@@ -34,7 +34,7 @@
                             "rescue":                       "7.0.0-alpha.14",
                             "satiate":                      "0.0.3",
                             "whittle":                      "0.0.1",
-                            "writeahead":                   "0.0.40"
+                            "writeahead":                   "0.0.41"
     },
     "devDependencies":
     {
