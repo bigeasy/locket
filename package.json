@@ -40,7 +40,7 @@
     {
                             "comeuppance":                  "0.0.1",
                             "leveldown":                    "5.6.0",
-                            "levelup":                      "4.4.0",
+                            "levelup":                      "5.0.0",
                             "proof":                        "^9.0.2",
                             "tape":                         "5.2.2"
     },
