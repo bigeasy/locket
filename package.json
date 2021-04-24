@@ -21,7 +21,7 @@
     },
     "dependencies":
     {
-                            "abstract-leveldown":           "6.3.0",
+                            "abstract-leveldown":           "7.0.0",
                             "amalgamate":                   "0.1.65",
                             "b-tree":                       "2.0.0-alpha.107",
                             "cadence":                      "4.0.0-alpha.3",
