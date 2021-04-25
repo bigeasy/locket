@@ -134,36 +134,37 @@ class Paginator {
 // encoding.
 
 // TODO No call to super!
-function Iterator (db, options) {
-    AbstractIterator.call(this, db)
-    this._constraint = createConstraint(options)
-    this._options = options
-    this._db = db
-    this._transaction = this._db._rotator.locker.snapshot()
-    this._paginator = this._db._paginator(this._constraint, this._transaction, this._options)
-}
-util.inherits(Iterator, AbstractIterator)
+class Iterator extends AbstractIterator {
+    constructor (db, options) {
+        super(db)
+        this._constraint = createConstraint(options)
+        this._options = options
+        this._db = db
+        this._transaction = this._db._rotator.locker.snapshot()
+        this._paginator = this._db._paginator(this._constraint, this._transaction, this._options)
+    }
 
-// Our LevelUP `Iterator` implementation is a wrapper around the internal
-// iterator that merges our Strata b-tree with one or two logs where we are
-// gathering new batch operations. See the `Locket._internalIterator` method for
-// a description of how we compose an amalgamated MVCC iterator from the MVCC
-// iterator modules.
+    // Our LevelUP `Iterator` implementation is a wrapper around the internal
+    // iterator that merges our Strata b-tree with one or two logs where we are
+    // gathering new batch operations. See the `Locket._internalIterator` method
+    // for a description of how we compose an amalgamated MVCC iterator from the
+    // MVCC iterator modules.
 
-//
-Iterator.prototype._next = function (callback) {
-    this._paginator.next(callback)
-}
+    //
+    _next (callback) {
+        this._paginator.next(callback)
+    }
 
-Iterator.prototype._seek = function (target) {
-    const paginator = this._paginator
-    this._paginator = this.db._paginator(target, this._options)
-    paginator.release()
-}
+    _seek (target) {
+        const paginator = this._paginator
+        this._paginator = this.db._paginator(target, this._options)
+        paginator.release()
+    }
 
-Iterator.prototype._end = function (callback) {
-    this._db._rotator.locker.release(this._transaction)
-    callback()
+    _end (callback) {
+        this._db._rotator.locker.release(this._transaction)
+        callback()
+    }
 }
 
 function Locket (destructible, location, options = {}) {
