@@ -83,46 +83,48 @@ function encode (buffer) {
     return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)
 }
 
-function Paginator (iterator, constraints, options) {
-    const constrained = constraints == null
-        ? iterator
-        : mvcc.constrain(iterator, constraints)
-    this._iterator = mvcc.satiate(constrained, 1)
-    this._constraints = constraints
-    this._keyAsBuffer = options.keyAsBuffer
-    this._valueAsBuffer = options.valueAsBuffer
-    this._keys = options.keys
-    this._values = options.values
-    this._items = []
-    this._index = 0
-}
-
-Paginator.prototype.next = cadence(function (step) {
-    if (this._items.length != this._index) {
-        const item = this._items[this._index++], result = new Array(2)
-        if (this._keys) {
-            result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
-        }
-        if (this._values) {
-            result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
-        }
-        return result
+class Paginator {
+    constructor (iterator, constraints, options) {
+        const constrained = constraints == null
+            ? iterator
+            : mvcc.constrain(iterator, constraints)
+        this._iterator = mvcc.satiate(constrained, 1)
+        this._constraints = constraints
+        this._keyAsBuffer = options.keyAsBuffer
+        this._valueAsBuffer = options.valueAsBuffer
+        this._keys = options.keys
+        this._values = options.values
+        this._items = []
+        this._index = 0
     }
-    let items = null
-    step(function () {
-        const trampoline = new Trampoline
-        this._iterator.next(trampoline, $items => items = $items)
-        trampoline.callback(step())
-    }, function () {
-        if (this._iterator.done) {
-            return []
-        } else {
-            this._items = items
-            this._index = 0
-            this.next(step())
+
+    next = cadence(function (step) {
+        if (this._items.length != this._index) {
+            const item = this._items[this._index++], result = new Array(2)
+            if (this._keys) {
+                result[0] = this._keyAsBuffer ? item.parts[1] : item.parts[1].toString()
+            }
+            if (this._values) {
+                result[1] = this._valueAsBuffer ? item.parts[2] : item.parts[2].toString()
+            }
+            return result
         }
+        let items = null
+        step(function () {
+            const trampoline = new Trampoline
+            this._iterator.next(trampoline, $items => items = $items)
+            trampoline.callback(step())
+        }, function () {
+            if (this._iterator.done) {
+                return []
+            } else {
+                this._items = items
+                this._index = 0
+                this.next(step())
+            }
+        })
     })
-})
+}
 
 // An implementation of the LevelDOWN `Iterator` object.
 //
