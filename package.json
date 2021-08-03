@@ -39,7 +39,7 @@
     "devDependencies":
     {
                             "comeuppance":                  "0.0.3",
-                            "leveldown":                    "6.0.0",
+                            "leveldown":                    "6.0.1",
                             "levelup":                      "5.0.1",
                             "proof":                        "^9.0.2",
                             "tape":                         "5.3.0"
