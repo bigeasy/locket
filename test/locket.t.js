@@ -22,7 +22,7 @@ require('proof')(6, require('cadence')(function (step, okay) {
     }, function () {
         new Locket(destructible, location)
 
-        const locket = Locket(destructible, location, {
+        const locket = new Locket(destructible, location, {
             primary: {
                 leaf: { split: 64, merge: 32 },
                 branch: { split: 64, merge: 32 },
