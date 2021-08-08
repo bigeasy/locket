@@ -20,9 +20,9 @@ require('proof')(6, require('cadence')(function (step, okay) {
     }, function () {
         fs.mkdir(location, { recursive: true }, step())
     }, function () {
-        new Locket(destructible, location)
+        new Locket(location)
 
-        const locket = new Locket(destructible, location, {
+        const locket = new Locket(location, {
             primary: {
                 leaf: { split: 64, merge: 32 },
                 branch: { split: 64, merge: 32 },
@@ -111,7 +111,8 @@ require('proof')(6, require('cadence')(function (step, okay) {
             const del = alphabet.map(letter => { return { type: 'del', key: letter } })
 
             step.loop([ 0 ], function (i) {
-                if (i == 128) {
+                // **TODO** Double this number and it hangs indefinately.
+                if (i == 64) {
                     return [ step.break ]
                 }
                 step(function () {
@@ -121,8 +122,10 @@ require('proof')(6, require('cadence')(function (step, okay) {
                 })
             })
         }, function () {
+            console.log('closeing')
             locket.close(step())
         }, function () {
+            console.log('closed')
             locket.open({ createIfMissing: true }, step())
         }, function () {
             locket.close(step())

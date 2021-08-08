@@ -4,3 +4,4 @@
 /docs
 /node_modules
 /test/tmp
+/benchmark/tmp

@@ -198,8 +198,8 @@ class Iterator extends AbstractIterator {
     }
 }
 
-class Locket  extends AbstractLevelDOWN {
-    constructor (destructible, location, options = {}) {
+class Locket extends AbstractLevelDOWN {
+    constructor (location, options = {}) {
         super()
         this.location = location
         this._cache = coalesce(options.cache, new Magazine),
@@ -215,7 +215,7 @@ class Locket  extends AbstractLevelDOWN {
     _serializeValue = encode
 
     _open = cadence(function (step, options) {
-        const destructible = new Destructible('locket')
+        const destructible = this._destructible = new Destructible('locket')
         // TODO Only use the old callback `fs`.
         const fs = require('fs')
         // TODO What is the behavior if you close while opening, or open while closing?
@@ -250,7 +250,7 @@ class Locket  extends AbstractLevelDOWN {
             const writeahead = new WriteAhead(destructible.durable($ => $(), 'writeahead'), turnstile, await WriteAhead.open({
                 directory: path.resolve(this.location, 'wal')
             }))
-            this._rotator = new Rotator(destructible.durable($ => $(), 'rotator'), await Rotator.open(writeahead), { size: 1024 * 1024 / 4 })
+            this._rotator = new Rotator(destructible.durable($ => $(), 'rotator'), await Rotator.open(writeahead), { size: 1024 * 1024  })
             // TODO Make strands user optional.
             return this._rotator.open(Fracture.stack(), 'locket', {
                 handles: new Operation.Cache(new Magazine),
@@ -289,12 +289,12 @@ class Locket  extends AbstractLevelDOWN {
                     }
                 },
                 primary: options.primary || {
-                    leaf: { split: 256, merge: 32 },
-                    branch: { split: 256, merge: 32 },
+                    leaf: { split: 1024 * 32, merge: 32 },
+                    branch: { split: 1024 * 32, merge: 32 },
                 },
                 stage: options.stage || {
-                    leaf: { split: 256, merge: 32 },
-                    branch: { split: 256, merge: 32 },
+                    leaf: { split: 1024 * 1024 * 1024, merge: 32 },
+                    branch: { split: 1024 * 1024 * 1024, merge: 32 },
                 }
             })
         }, function (amalgamator) {
@@ -389,7 +389,9 @@ class Locket  extends AbstractLevelDOWN {
     // TODO Countdown through the write queue.
     _close = cadence(function (step) {
         step(function () {
-            return this._amalgamator.destructible.destroy().promise
+            return this._amalgamator.drain()
+        }, function () {
+            return this._destructible.destroy().promise
         }, function () {
             return []
         })

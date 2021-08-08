@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+Error.stackTraceLimit = 88
+
 /*
   ___ usage ___ en_US ___
   usage: node load.js
@@ -13,38 +15,40 @@
   ___ . ___
 */
 
-var Locket = require('../')
-var cadence = require('cadence')
-var path = require('path')
-var crypto = require('crypto')
-var seedrandom = require('seedrandom')
-var levelup = require('levelup')
-var rimraf = require('rimraf')
+const Destructible = require('destructible')
+const Locket = require('../')
+const cadence = require('cadence')
+const path = require('path')
+const crypto = require('crypto')
+const seedrandom = require('seedrandom')
+const levelup = require('levelup')
+const leveldown = require('leveldown')
 
-var mkdirp = require('mkdirp')
+const fs = require('fs').promises
 
-var random = (function () {
-    var random = seedrandom(0)
+const { callback } = require('comeuppance')
+
+const random = (function () {
+    const random = seedrandom(0)
     return function (max) {
         return Math.floor(random() * max)
     }
 })()
 
-var runner = cadence(function (async, program) {
-    var start, insert, gather
-    var file = path.join(__dirname, 'tmp', 'put'), db, records = []
-    var o = { createIfMissing: true }
-    if (!program.ultimate.leveldown) {
-        o.db = require('..')
-    }
-    var batches = []
-    while (batches.length != 7) {
-        var entries = []
-        var type, sha, buffer, value
-        for (var i = 0; i < 1024; i++) {
-            var value = random(1024)
-            sha = crypto.createHash('sha1')
-            buffer = new Buffer(4)
+const runner = cadence(function (step, arguable) {
+    let start, insert, gather, level
+    const tmp = path.join(__dirname, 'tmp')
+    const o = { createIfMissing: true }
+    const destructible = new Destructible('benchmark/load')
+    const batches = []
+    let key = 0
+    while (batches.length != 124) {
+        const entries = []
+        for (let i = 0; i < 1024; i++) {
+            if (false) {
+            const value = random(1024)
+            const sha = crypto.createHash('sha1')
+            const buffer = Buffer.alloc(4)
             buffer.writeUInt32BE(value, 0)
             sha.update(buffer)
             entries.push({
@@ -52,45 +56,100 @@ var runner = cadence(function (async, program) {
                 value: buffer,
                 type: !! random(2) ? 'put' : 'del'
             })
+            } else {
+            const buffer = Buffer.alloc(4)
+            buffer.writeUInt32BE(key++, 0)
+            entries.push({
+                key: buffer,
+                value: buffer,
+                type: !! random(2) ? 'put' : 'del'
+            })
+            }
         }
         batches.push(entries)
     }
-    async(function () {
-        rimraf(file, async())
+    destructible.promise.catch(error => console.log(error.stack))
+    destructible.destruct(() => 'destructing')
+    step(function () {
+        return fs.rm(tmp, { recursive: true, force: true })
     }, function () {
-        //mkdirp(file, async())
+        return fs.mkdir(tmp, { recursive: true })
     }, function () {
         start = Date.now()
-        levelup(file, o, async())
-    }, function (db) {
-        async(function () {
-            var batch = 0, loop = async(function () {
-                if (batch == 7) return [ loop.break ]
-                db.batch(batches[batch], async())
-                batch++
-            })()
+        if (arguable.ultimate.leveldb) {
+            const file = path.join(tmp, 'put')
+            return leveldown(file)
+        } else {
+            const file = path.join(tmp, 'put')
+            step(function () {
+                return fs.mkdir(file)
+            }, function () {
+                return new Locket(file)
+            })
+        }
+    }, function (leveldown) {
+        const db = levelup(leveldown)
+        step(function () {
+            let batch = 0
+            const loop = step.loop([ 0 ], function (i) {
+                if (i == 124) {
+                    return [ loop.break ]
+                }
+                step(function () {
+                    console.log(i)
+                    db.batch(batches[i], step())
+                }, function () {
+                    return i + 1
+                })
+            })
         }, function () {
-            db.close(async())
+            db.close(step())
         })
     }, function () {
         insert = Date.now() - start
         start = Date.now()
-        levelup(file, o, async())
-    }, function (db) {
-        async(function () {
-            async.ee(db.createReadStream())
-                 .on('data', function (data) { records.push(data) })
-                 .end('end')
-                 .error()
+        return
+        if (arguable.ultimate.leveldb) {
+            const file = path.join(tmp, 'put')
+            return leveldown(file)
+        } else {
+            const file = path.join(tmp, 'put')
+            return new Locket(file)
+        }
+    }, function (leveldown) {
+        return
+        const db = levelup(leveldown)
+        step(function () {
+            step.ee(db.createReadStream())
+                .on('data', function (data) { records.push(data) })
+                .end('end')
+                .error()
         }, function () {
-            db.close(async())
+            db.close(step())
         }, function () {
             gather = Date.now() - start
             console.log('insert: ' + insert + ', gather: ' + gather)
         })
+    }, function () {
+        console.log('insert: ' + insert)
+        return destructible.destroy().promise
     })
 })
 
-require('arguable')(module, cadence(function (async, program) {
-    runner(program, async())
-}))
+/*
+    ___ usage ___ en_US ___
+    usage: prolific <options> <program>
+
+    options:
+
+        -l, --leveldb
+            use leveldb
+
+    ___ $ ___ en_US ___
+
+    ___ . ___
+*/
+
+require('arguable')(module, async arguable => {
+    await callback(callback => runner(arguable, callback))
+})
