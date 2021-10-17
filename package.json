@@ -41,7 +41,7 @@
                             "arguable":                     "13.0.0-alpha.4",
                             "comeuppance":                  "0.0.3",
                             "eject":                        "0.3.0",
-                            "leveldown":                    "6.0.1",
+                            "leveldown":                    "6.1.0",
                             "levelup":                      "5.1.1",
                             "proof":                        "^9.0.2",
                             "seedrandom":                   "3.0.5",
