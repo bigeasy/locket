@@ -36,7 +36,7 @@ const AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 const AbstractIterator  = require('abstract-leveldown').AbstractIterator
 
 // An `async`/`await` trampoline.
-const Trampoline        = require('reciprocate')
+const { Trampoline }    = require('reciprocate')
 
 // Structured concurrency.
 const Destructible      = require('destructible')
@@ -124,7 +124,7 @@ class Paginator {
     })
 }
 
-const duplicated = ascension([ Buffer.compare, [ Number, -1 ], [ Number, -1 ] ])
+const duplicated = ascension([ Buffer.compare, Number, -1, Number, -1 ])
 
 function createConstraint (options) {
     const start = coalesce(options.gt, options.start, options.gte, null)
