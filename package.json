@@ -38,7 +38,7 @@
     },
     "devDependencies":
     {
-                            "arguable":                     "13.0.0-alpha.4",
+                            "arguable":                     "13.0.0-alpha.6",
                             "comeuppance":                  "0.0.3",
                             "eject":                        "0.3.1",
                             "leveldown":                    "6.1.0",
